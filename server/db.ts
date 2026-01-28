@@ -104,6 +104,12 @@ export const db = {
   getAllLeads: async (params: any) => {
     return listLeads(params);
   },
+  getSiteSettings: async () => {
+    const dbInstance = await getDb();
+    if (!dbInstance) return null;
+    const result = await dbInstance.select().from(siteSettings).limit(1);
+    return result[0] || null;
+  },
 };
 
 // ============================================
