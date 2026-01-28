@@ -1,17 +1,44 @@
+function getRequiredEnv(key: string): string {
+  const value = process.env[key];
+  if (!value || value.trim() === "") {
+    console.error(`❌ [ENV] Variável obrigatória não configurada: ${key}`);
+    throw new Error(`Variável de ambiente obrigatória não configurada: ${key}`);
+  }
+  return value;
+}
+
+function getOptionalEnv(key: string, defaultValue: string = ""): string {
+  return process.env[key] ?? defaultValue;
+}
+
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+  // Variáveis obrigatórias
+  appId: getRequiredEnv("VITE_APP_ID"),
+  cookieSecret: getRequiredEnv("JWT_SECRET"),
+  databaseUrl: getRequiredEnv("DATABASE_URL"),
+  
+  // Variáveis opcionais
+  oAuthServerUrl: getOptionalEnv("OAUTH_SERVER_URL"),
+  ownerOpenId: getOptionalEnv("OWNER_OPEN_ID"),
   isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  n8nLeadWebhookUrl: process.env.N8N_LEAD_WEBHOOK_URL ?? "",
-  n8nChatWebhookUrl: process.env.VITE_N8N_CHAT_WEBHOOK_URL ?? "",
-  storageBucket: process.env.STORAGE_BUCKET ?? "",
-  storageRegion: process.env.STORAGE_REGION ?? "",
-  storageEndpoint: process.env.STORAGE_ENDPOINT ?? "",
-  storageAccessKey: process.env.STORAGE_ACCESS_KEY ?? "",
-  storageSecretKey: process.env.STORAGE_SECRET_KEY ?? "",
+  forgeApiUrl: getOptionalEnv("BUILT_IN_FORGE_API_URL"),
+  forgeApiKey: getOptionalEnv("BUILT_IN_FORGE_API_KEY"),
+  n8nLeadWebhookUrl: getOptionalEnv("N8N_LEAD_WEBHOOK_URL"),
+  n8nChatWebhookUrl: getOptionalEnv("VITE_N8N_CHAT_WEBHOOK_URL"),
+  storageBucket: getOptionalEnv("STORAGE_BUCKET"),
+  storageRegion: getOptionalEnv("STORAGE_REGION"),
+  storageEndpoint: getOptionalEnv("STORAGE_ENDPOINT"),
+  storageAccessKey: getOptionalEnv("STORAGE_ACCESS_KEY"),
+  storageSecretKey: getOptionalEnv("STORAGE_SECRET_KEY"),
 };
+
+// Log de inicialização
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+console.log("🔧 [ENV] Variáveis de Ambiente Carregadas");
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+console.log(`✅ APP_ID: ${ENV.appId}`);
+console.log(`✅ DATABASE_URL: ${ENV.databaseUrl ? "Configurado" : "❌ Vazio"}`);
+console.log(`✅ JWT_SECRET: ${ENV.cookieSecret ? "Configurado (oculto)" : "❌ Vazio"}`);
+console.log(`ℹ️  OAUTH_SERVER_URL: ${ENV.oAuthServerUrl || "Não configurado (opcional)"}`);
+console.log(`ℹ️  NODE_ENV: ${process.env.NODE_ENV || "development"}`);
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
