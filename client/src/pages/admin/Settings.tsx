@@ -1,179 +1,78 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
-import { Settings as SettingsIcon, Save, Building2, Palette, Mail } from "lucide-react";
+import { Settings as SettingsIcon, Users, Shield, Palette, Bell, FileText } from "lucide-react";
+import UserManagement from "./UserManagement";
+import PermissionsControl from "./PermissionsControl";
+import SiteCustomization from "./SiteCustomization";
+import SystemSettings from "./SystemSettings";
+import AuditLogs from "./AuditLogs";
 
 export default function Settings() {
-  const { data: settings, isLoading } = trpc.settings.get.useQuery();
-  const updateMutation = trpc.settings.update.useMutation({
-    onSuccess: () => {
-      toast.success("Configurações salvas com sucesso!");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Erro ao salvar configurações");
-    },
-  });
-
-  const [formData, setFormData] = useState({
-    siteName: settings?.siteName || "Leman Negócios Imobiliários",
-    primaryColor: settings?.primaryColor || "#c9a962",
-    contactEmail: settings?.contactEmail || "contato@lemannegocios.com.br",
-    contactPhone: settings?.contactPhone || "(61) 99868-7245",
-  });
-
-  const handleSave = () => {
-    updateMutation.mutate(formData);
-  };
-
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split("?")[1] || "");
+  const defaultTab = searchParams.get("tab") || "users";
 
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold">Configurações</h1>
-            <p className="text-muted-foreground">Gerencie as configurações do sistema</p>
+            <p className="text-muted-foreground">
+              Gerencie todas as configurações do sistema
+            </p>
           </div>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="general">
-              <Building2 className="h-4 w-4 mr-2" />
-              Geral
+        {/* Tabs */}
+        <Tabs defaultValue={defaultTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="users">
+              <Users className="h-4 w-4 mr-2" />
+              Usuários
             </TabsTrigger>
-            <TabsTrigger value="appearance">
+            <TabsTrigger value="permissions">
+              <Shield className="h-4 w-4 mr-2" />
+              Permissões
+            </TabsTrigger>
+            <TabsTrigger value="customization">
               <Palette className="h-4 w-4 mr-2" />
-              Aparência
+              Customização
             </TabsTrigger>
-            <TabsTrigger value="contact">
-              <Mail className="h-4 w-4 mr-2" />
-              Contato
+            <TabsTrigger value="system">
+              <Bell className="h-4 w-4 mr-2" />
+              Sistema
+            </TabsTrigger>
+            <TabsTrigger value="logs">
+              <FileText className="h-4 w-4 mr-2" />
+              Logs
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações Gerais</CardTitle>
-                <CardDescription>
-                  Configure as informações básicas do site
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="siteName">Nome do Site</Label>
-                  <Input
-                    id="siteName"
-                    value={formData.siteName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, siteName: e.target.value })
-                    }
-                    placeholder="Nome da imobiliária"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="users">
+            <UserManagement />
           </TabsContent>
 
-          <TabsContent value="appearance" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personalização Visual</CardTitle>
-                <CardDescription>
-                  Customize as cores e aparência do site
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primaryColor">Cor Primária</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="primaryColor"
-                      type="color"
-                      value={formData.primaryColor}
-                      onChange={(e) =>
-                        setFormData({ ...formData, primaryColor: e.target.value })
-                      }
-                      className="w-20 h-10"
-                    />
-                    <Input
-                      value={formData.primaryColor}
-                      onChange={(e) =>
-                        setFormData({ ...formData, primaryColor: e.target.value })
-                      }
-                      placeholder="#c9a962"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="permissions">
+            <PermissionsControl />
           </TabsContent>
 
-          <TabsContent value="contact" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações de Contato</CardTitle>
-                <CardDescription>
-                  Configure os dados de contato exibidos no site
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contactEmail">Email de Contato</Label>
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contactEmail: e.target.value })
-                    }
-                    placeholder="contato@exemplo.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactPhone">Telefone de Contato</Label>
-                  <Input
-                    id="contactPhone"
-                    type="tel"
-                    value={formData.contactPhone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contactPhone: e.target.value })
-                    }
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="customization">
+            <SiteCustomization />
+          </TabsContent>
+
+          <TabsContent value="system">
+            <SystemSettings />
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <AuditLogs />
           </TabsContent>
         </Tabs>
-
-        <div className="flex justify-end">
-          <Button
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-            size="lg"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {updateMutation.isPending ? "Salvando..." : "Salvar Configurações"}
-          </Button>
-        </div>
       </div>
     </AdminLayout>
   );
