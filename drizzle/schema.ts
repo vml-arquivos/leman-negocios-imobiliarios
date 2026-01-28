@@ -51,15 +51,18 @@ export const transactionStatusEnum = pgEnum("transaction_status", ["pendente", "
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  openId: varchar("openId", { length: 64 }).unique(), // Nullable para compatibilidade com auth local
+  openId: varchar("open_id", { length: 64 }).unique(), // Nullable para compatibilidade com auth local
   name: text("name").notNull(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   password: varchar("password", { length: 255 }), // Hash da senha (bcrypt/scrypt)
-  loginMethod: varchar("loginMethod", { length: 64 }).default("local"),
+  loginMethod: varchar("login_method", { length: 64 }).default("local"),
   role: roleEnum("role").default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  telefone: varchar("telefone", { length: 20 }),
+  avatarUrl: varchar("avatar_url", { length: 500 }),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
