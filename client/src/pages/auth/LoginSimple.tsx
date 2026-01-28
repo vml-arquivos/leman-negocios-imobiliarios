@@ -1,58 +1,27 @@
-/**
- * Página de Login Simplificada
- * Leman Negócios Imobiliários
- */
-
 import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function LoginSimple() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    try {
-      console.log("[Login] Enviando requisição...");
+    // Simular delay de rede
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+    const success = login(email, password);
 
-      const data = await response.json();
-
-      console.log("[Login] Resposta:", data);
-
-      if (!response.ok) {
-        setError(data.message || "Erro ao fazer login");
-        setLoading(false);
-        return;
-      }
-
-      if (data.success) {
-        // Salvar token no localStorage
-        localStorage.setItem("auth_token", data.data.token);
-        localStorage.setItem("user", JSON.stringify(data.data.user));
-
-        console.log("[Login] ✅ Login bem-sucedido!");
-
-        // Redirecionar para o dashboard
-        window.location.href = "/admin";
-      } else {
-        setError(data.message || "Erro ao fazer login");
-      }
-    } catch (err: any) {
-      console.error("[Login] Erro:", err);
-      setError("Erro de conexão com o servidor");
-    } finally {
+    if (success) {
+      window.location.href = "/admin";
+    } else {
+      setError("Email ou senha incorretos");
       setLoading(false);
     }
   };
@@ -115,19 +84,12 @@ export default function LoginSimple() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Não tem uma conta?{" "}
-            <a href="/auth/register" className="text-orange-500 hover:text-orange-600 font-medium">
-              Cadastre-se
-            </a>
-          </p>
-        </div>
-
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            Sistema de Autenticação Simplificado v2.0
-          </p>
+          <div className="text-xs text-gray-500 space-y-2">
+            <p className="font-semibold">Credenciais de teste:</p>
+            <p>Email: evandro@lemannegocios.com.br</p>
+            <p>Senha: admin123</p>
+          </div>
         </div>
       </div>
     </div>

@@ -41,8 +41,7 @@ function Router() {
   return (
     <Switch>
       {/* Public routes */}
-      <Route path={"/"} component={() => { window.location.href = "/admin"; return null; }} />
-      <Route path="/home" component={Home} />
+      <Route path={"/"} component={Home} />
       <Route path="/auth/login" component={LoginSimple} />
       <Route path="/auth/login-old" component={Login} />
       <Route path="/imoveis" component={Properties} />

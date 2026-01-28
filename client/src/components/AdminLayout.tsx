@@ -23,7 +23,26 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth({ redirectOnUnauthenticated: true });
+
+  // Mostrar loading enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não estiver autenticado, não renderizar (será redirecionado)
+  if (!user) {
+    return null;
+  }
+
+  const { user: authenticatedUser, logout: performLogout } = { user, logout };
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
