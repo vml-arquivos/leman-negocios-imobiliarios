@@ -34,6 +34,7 @@ import SiteCustomization from "./pages/admin/SiteCustomization";
 import FinancialDashboardDemo from "./pages/admin/FinancialDashboardDemo";
 import OwnerPortal from "./pages/OwnerPortal";
 import Login from "./pages/auth/Login";
+import LoginSimple from "./pages/auth/LoginSimple";
 import Settings from "./pages/admin/Settings";
 
 function Router() {
@@ -41,7 +42,8 @@ function Router() {
     <Switch>
       {/* Public routes */}
       <Route path={"/"} component={Home} />
-      <Route path="/auth/login" component={Login} />
+      <Route path="/auth/login" component={LoginSimple} />
+      <Route path="/auth/login-old" component={Login} />
       <Route path="/imoveis" component={Properties} />
       <Route path="/imovel/:id" component={PropertyDetailPage} />
       <Route path="/blog" component={Blog} />
