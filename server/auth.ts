@@ -1,34 +1,27 @@
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-
-const scryptAsync = promisify(scrypt);
+import bcrypt from "bcryptjs";
 
 /**
- * Hash a password using scrypt (Node.js built-in, no external dependencies)
- * Format: salt.hash
+ * Hash a password using bcrypt
+ * Compatible with Supabase bcrypt hashes ($2a$10$ or $2b$10$)
  */
 export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${salt}.${buf.toString("hex")}`;
+  const saltRounds = 10;
+  return await bcrypt.hash(password, saltRounds);
 }
 
 /**
- * Verify a password against a stored hash
+ * Verify a password against a stored bcrypt hash
  */
 export async function verifyPassword(
   password: string,
   storedHash: string
 ): Promise<boolean> {
-  const [salt, hash] = storedHash.split(".");
-  if (!salt || !hash) {
+  try {
+    return await bcrypt.compare(password, storedHash);
+  } catch (error) {
+    console.error("[Auth] Error verifying password:", error);
     return false;
   }
-  
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  const hashBuf = Buffer.from(hash, "hex");
-  
-  return timingSafeEqual(buf, hashBuf);
 }
 
 /**
