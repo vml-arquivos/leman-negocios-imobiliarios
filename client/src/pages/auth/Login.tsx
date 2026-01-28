@@ -16,14 +16,11 @@ export default function Login() {
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data) => {
       toast.success(`Bem-vindo, ${data.user.name}!`);
-      // Redirecionar para dashboard se admin, senão para home
-      if (data.user.role === "admin") {
-        setLocation("/admin/dashboard");
-      } else {
-        setLocation("/");
-      }
-      // Recarregar para atualizar contexto de usuário
-      window.location.reload();
+      setIsLoading(false);
+      // Redirecionar para área do corretor
+      setTimeout(() => {
+        window.location.href = "/admin";
+      }, 500);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao fazer login");
