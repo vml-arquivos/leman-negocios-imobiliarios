@@ -1045,7 +1045,7 @@ const integrationRouter = router({
             state: p.state,
             mainImage: p.mainImage,
             referenceCode: p.referenceCode,
-            url: `https://casadf.com.br/imovel/${p.id}`,
+            url: `https://lemannegocios.com.br/imovel/${p.id}`,
           })),
         };
       } catch (error: any) {

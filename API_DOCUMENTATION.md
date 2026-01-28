@@ -1,4 +1,4 @@
-# Documentação Completa de APIs - Casa DF
+# Documentação Completa de APIs - Leman Negócios Imobiliários
 
 ## 📋 Índice
 
@@ -15,7 +15,7 @@
 
 ## Visão Geral
 
-**Base URL:** `https://casadf.com.br/api/trpc`
+**Base URL:** `https://lemannegocios.com.br/api/trpc`
 
 **Protocolo:** tRPC (Type-safe RPC)
 
@@ -45,8 +45,8 @@ Retorna informações do usuário logado.
 ```json
 {
   "id": 1,
-  "name": "Casa DF",
-  "email": "contato@casadf.com.br",
+  "name": "Leman Negócios Imobiliários",
+  "email": "contato@lemannegocios.com.br",
   "role": "admin",
   "createdAt": "2024-01-01T00:00:00.000Z"
 }
@@ -649,7 +649,7 @@ Busca imóveis compatíveis com perfil do cliente para envio via WhatsApp.
       "neighborhood": "Lago Sul",
       "mainImage": "https://...",
       "referenceCode": "LS-001",
-      "url": "https://casadf.com.br/imovel/1"
+      "url": "https://lemannegocios.com.br/imovel/1"
     }
   ]
 }
@@ -742,7 +742,7 @@ const message = {
   type: "incoming"
 };
 
-await fetch('https://casadf.com.br/api/trpc/integration.whatsappWebhook', {
+await fetch('https://lemannegocios.com.br/api/trpc/integration.whatsappWebhook', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(message)
@@ -757,7 +757,7 @@ const leadData = {
   budgetRange: "R$ 2M - R$ 5M"
 };
 
-await fetch('https://casadf.com.br/api/trpc/integration.saveLeadFromWhatsApp', {
+await fetch('https://lemannegocios.com.br/api/trpc/integration.saveLeadFromWhatsApp', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(leadData)
@@ -772,7 +772,7 @@ const matchRequest = {
   limit: 3
 };
 
-const response = await fetch('https://casadf.com.br/api/trpc/integration.matchPropertiesForClient', {
+const response = await fetch('https://lemannegocios.com.br/api/trpc/integration.matchPropertiesForClient', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(matchRequest)
@@ -804,7 +804,7 @@ ${property.description}
 
 ```javascript
 // 1. Analisar histórico de mensagens
-const history = await fetch('https://casadf.com.br/api/trpc/integration.getHistory?phone=5561999999999');
+const history = await fetch('https://lemannegocios.com.br/api/trpc/integration.getHistory?phone=5561999999999');
 const messages = await history.json();
 
 // 2. Usar IA para analisar perfil
@@ -819,7 +819,7 @@ const qualificationData = {
   notes: analysis.notes
 };
 
-await fetch('https://casadf.com.br/api/trpc/integration.updateLeadQualification', {
+await fetch('https://lemannegocios.com.br/api/trpc/integration.updateLeadQualification', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(qualificationData)
@@ -836,7 +836,7 @@ import type { AppRouter } from './server/routers';
 const trpc = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: 'https://casadf.com.br/api/trpc',
+      url: 'https://lemannegocios.com.br/api/trpc',
     }),
   ],
 });

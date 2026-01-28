@@ -137,8 +137,8 @@ async function seedDatabase() {
 
     console.log("📰 Criando posts de blog...");
     const posts = [
-      ["Como Financiar um Imóvel em Brasília", "como-financiar-imovel-brasilia", "Guia completo...", "Descubra as melhores formas", "Casa DF", 1],
-      ["Dicas para Alugar com Segurança", "dicas-alugar-imovel-seguranca", "Saiba os cuidados...", "Proteja-se ao alugar", "Casa DF", 1],
+      ["Como Financiar um Imóvel em Brasília", "como-financiar-imovel-brasilia", "Guia completo...", "Descubra as melhores formas", "Leman Negócios Imobiliários", 1],
+      ["Dicas para Alugar com Segurança", "dicas-alugar-imovel-seguranca", "Saiba os cuidados...", "Proteja-se ao alugar", "Leman Negócios Imobiliários", 1],
     ];
 
     const insertPost = db.prepare(`

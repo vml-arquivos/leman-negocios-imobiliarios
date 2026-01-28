@@ -1,4 +1,4 @@
-# TODO - Casa DF
+# TODO - Leman Negócios Imobiliários
 
 ## Fase 1: Schema do Banco de Dados e Estrutura Inicial
 
@@ -83,7 +83,7 @@
 ## Correções Urgentes (Solicitadas pelo Usuário)
 
 - [x] Trocar fontes Playfair Display para Montserrat/Poppins
-- [x] Adicionar logotipo do Casa DF no header
+- [x] Adicionar logotipo do Leman Negócios Imobiliários no header
 - [x] Corrigir headers duplicados
 - [x] Melhorar dashboard administrativo com análise de clientes
 - [x] Criar níveis de análise de clientes (perfis)
@@ -96,7 +96,7 @@
 - [x] Colocar background preto no hero section
 - [x] Colocar fundo preto no header
 - [x] Garantir que todos os títulos usem fonte Montserrat
-- [x] Adicionar foto do Casa DF na página
+- [x] Adicionar foto do Leman Negócios Imobiliários na página
 - [x] Adicionar link para Dashboard CRM no header
 - [x] Testar ajustes
 - [x] Criar checkpoint final
@@ -362,7 +362,7 @@
 
 ## Preparação Final para GitHub
 
-- [x] Criar página Quem Somos completa com sobre a Casa DF
+- [x] Criar página Quem Somos completa com sobre a Leman Negócios Imobiliários
 - [x] Verificar todas as conexões backend↔frontend
 - [x] Criar guia GITHUB_UPLOAD.md com instruções passo a passo
 - [x] Confirmar que projeto está pronto para download

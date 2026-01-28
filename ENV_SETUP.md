@@ -89,7 +89,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=seu-email@gmail.com
 SMTP_PASSWORD=sua-senha-app
-SMTP_FROM=Casa DF <contato@casadf.com>
+SMTP_FROM=Leman Negócios Imobiliários <contato@lemannegocios.com.br>
 ```
 
 **Nota para Gmail**: Use uma "App Password" em vez da senha normal.
@@ -183,7 +183,7 @@ Para rodar o projeto localmente sem a plataforma Manus:
 2. Configure pelo menos as variáveis obrigatórias:
 
 ```env
-DATABASE_URL=mysql://root:password@localhost:3306/casadf
+DATABASE_URL=mysql://root:password@localhost:3306/leman
 JWT_SECRET=seu-jwt-secret-local
 NODE_ENV=development
 PORT=3000
@@ -221,5 +221,5 @@ Sempre use variáveis de ambiente para informações sensíveis como:
 
 Para dúvidas sobre configuração:
 - Documentação Manus: https://docs.manus.im
-- Email: contato@casadf.com.br
+- Email: contato@lemannegocios.com.br
 - WhatsApp: (61) 3254-4464

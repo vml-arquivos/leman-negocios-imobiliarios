@@ -1,11 +1,11 @@
-# Estrutura do Projeto - Casa DF
+# Estrutura do Projeto - Leman Negócios Imobiliários
 
 Documentação completa da organização de arquivos e pastas do projeto.
 
 ## 📂 Visão Geral
 
 ```
-casadf/
+leman/
 ├── client/                 # Frontend React + Vite
 ├── server/                 # Backend Express + tRPC
 ├── drizzle/               # Database schema e migrations
@@ -22,13 +22,13 @@ Assets estáticos servidos diretamente na raiz do site.
 
 ```
 public/
-├── logo-casadf.png    # Foto do corretor
-├── logo-casadf.png     # Logo da empresa
+├── logo-leman.png    # Foto do corretor
+├── logo-leman.png     # Logo da empresa
 ├── favicon.ico               # Ícone do site
 └── robots.txt                # SEO - instruções para crawlers
 ```
 
-**Nota**: Arquivos aqui são acessíveis via `/nome-do-arquivo.ext` (ex: `/logo-casadf.png`)
+**Nota**: Arquivos aqui são acessíveis via `/nome-do-arquivo.ext` (ex: `/logo-leman.png`)
 
 ### `client/src/`
 
@@ -382,7 +382,7 @@ Para adicionar novas funcionalidades:
 
 Dúvidas sobre a estrutura?
 
-- 📧 Email: contato@casadf.com.br
+- 📧 Email: contato@lemannegocios.com.br
 - 📱 WhatsApp: (61) 3254-4464
 
 ---

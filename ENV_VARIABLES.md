@@ -1,6 +1,6 @@
 # Variáveis de Ambiente
 
-Este documento lista todas as variáveis de ambiente necessárias para o projeto **Casa DF**.
+Este documento lista todas as variáveis de ambiente necessárias para o projeto **Leman Negócios Imobiliários**.
 
 ## 📋 Variáveis Obrigatórias
 
@@ -10,7 +10,7 @@ Este documento lista todas as variáveis de ambiente necessárias para o projeto
 |----------|-----------|---------|
 | `DATABASE_URL` | URL de conexão MySQL completa | `mysql://user:pass@host:3306/db` |
 | `MYSQL_ROOT_PASSWORD` | Senha do root MySQL (Docker) | `rootpassword` |
-| `MYSQL_DATABASE` | Nome do banco de dados | `casadf` |
+| `MYSQL_DATABASE` | Nome do banco de dados | `leman` |
 | `MYSQL_USER` | Usuário do banco | `corretor` |
 | `MYSQL_PASSWORD` | Senha do usuário | `corretorpassword` |
 | `MYSQL_PORT` | Porta do MySQL | `3306` |
@@ -42,7 +42,7 @@ Este documento lista todas as variáveis de ambiente necessárias para o projeto
 | Variável | Descrição | Exemplo |
 |----------|-----------|---------|
 | `OWNER_OPEN_ID` | OpenID do proprietário | Fornecido pela Manus |
-| `OWNER_NAME` | Nome do proprietário | `Casa DF` |
+| `OWNER_NAME` | Nome do proprietário | `Leman Negócios Imobiliários` |
 
 ### Manus Forge API (Backend)
 
@@ -69,7 +69,7 @@ Este documento lista todas as variáveis de ambiente necessárias para o projeto
 
 | Variável | Descrição | Exemplo |
 |----------|-----------|---------|
-| `VITE_APP_TITLE` | Título da aplicação | `Casa DF - Casa DF` |
+| `VITE_APP_TITLE` | Título da aplicação | `Leman Negócios Imobiliários - Leman Negócios Imobiliários` |
 | `VITE_APP_LOGO` | URL do logo | `https://example.com/logo.png` |
 
 ## 📋 Variáveis Opcionais

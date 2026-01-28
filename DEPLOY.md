@@ -1,4 +1,4 @@
-# Guia de Deploy - Casa DF
+# Guia de Deploy - Leman Negócios Imobiliários
 
 Este guia detalha como fazer deploy do projeto em diferentes plataformas.
 
@@ -23,7 +23,7 @@ Vercel é ideal para aplicações Next.js/React com backend serverless.
 
 2. **Importe o projeto**
    - Clique em "New Project"
-   - Selecione o repositório `casadf`
+   - Selecione o repositório `leman`
    - Vercel detectará automaticamente que é um projeto Vite
 
 3. **Configure Build Settings**
@@ -54,7 +54,7 @@ Vercel é ideal para aplicações Next.js/React com backend serverless.
 ### Configurar Domínio Personalizado
 
 1. No painel da Vercel, vá em "Settings" → "Domains"
-2. Adicione seu domínio (ex: `casadf.com.br`)
+2. Adicione seu domínio (ex: `lemannegocios.com.br`)
 3. Configure os DNS conforme instruções da Vercel
 4. Aguarde propagação (até 48h)
 
@@ -78,7 +78,7 @@ Railway é ideal para aplicações fullstack com banco de dados.
 2. **Crie um novo projeto**
    - Clique em "New Project"
    - Selecione "Deploy from GitHub repo"
-   - Escolha o repositório `casadf`
+   - Escolha o repositório `leman`
 
 3. **Adicione MySQL Database**
    - No projeto, clique em "New"
@@ -174,7 +174,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=mysql://root:password@db:3306/casadf
+      - DATABASE_URL=mysql://root:password@db:3306/leman
       - JWT_SECRET=${JWT_SECRET}
       - NODE_ENV=production
     depends_on:
@@ -185,7 +185,7 @@ services:
     image: mysql:8
     environment:
       - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=casadf
+      - MYSQL_DATABASE=leman
     volumes:
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
@@ -258,9 +258,9 @@ Para controle total do servidor.
    sudo mysql -u root -p
    ```
    ```sql
-   CREATE DATABASE casadf;
+   CREATE DATABASE leman;
    CREATE USER 'appuser'@'localhost' IDENTIFIED BY 'senha-segura';
-   GRANT ALL PRIVILEGES ON casadf.* TO 'appuser'@'localhost';
+   GRANT ALL PRIVILEGES ON leman.* TO 'appuser'@'localhost';
    FLUSH PRIVILEGES;
    EXIT;
    ```
@@ -272,8 +272,8 @@ Para controle total do servidor.
    sudo su - appuser
 
    # Clonar repositório
-   git clone https://github.com/seu-usuario/casadf.git
-   cd casadf
+   git clone https://github.com/seu-usuario/leman.git
+   cd leman
 
    # Instalar dependências
    pnpm install
@@ -292,25 +292,25 @@ Para controle total do servidor.
 5. **Configurar PM2**
    ```bash
    # Iniciar aplicação
-   pm2 start npm --name "casadf" -- start
+   pm2 start npm --name "leman" -- start
 
    # Configurar auto-start
    pm2 startup
    pm2 save
 
    # Ver logs
-   pm2 logs casadf
+   pm2 logs leman
    ```
 
 6. **Configurar Nginx**
    ```bash
-   sudo nano /etc/nginx/sites-available/casadf
+   sudo nano /etc/nginx/sites-available/leman
    ```
 
    ```nginx
    server {
        listen 80;
-       server_name casadf.com.br www.casadf.com.br;
+       server_name lemannegocios.com.br www.lemannegocios.com.br;
 
        location / {
            proxy_pass http://localhost:3000;
@@ -328,7 +328,7 @@ Para controle total do servidor.
 
    ```bash
    # Ativar site
-   sudo ln -s /etc/nginx/sites-available/casadf /etc/nginx/sites-enabled/
+   sudo ln -s /etc/nginx/sites-available/leman /etc/nginx/sites-enabled/
    sudo nginx -t
    sudo systemctl restart nginx
    ```
@@ -339,7 +339,7 @@ Para controle total do servidor.
    sudo apt install -y certbot python3-certbot-nginx
 
    # Obter certificado
-   sudo certbot --nginx -d casadf.com.br -d www.casadf.com.br
+   sudo certbot --nginx -d lemannegocios.com.br -d www.lemannegocios.com.br
 
    # Renovação automática já configurada
    ```
@@ -454,7 +454,7 @@ pnpm build
 
 Problemas com deploy?
 
-- 📧 Email: contato@casadf.com.br
+- 📧 Email: contato@lemannegocios.com.br
 - 📱 WhatsApp: (61) 3254-4464
 - 📚 Documentação: [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
 

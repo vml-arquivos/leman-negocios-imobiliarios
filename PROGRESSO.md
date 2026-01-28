@@ -6,7 +6,7 @@
 - [x] Logo processada e otimizada (7 versões)
 - [x] Cores azul marinho (#1a1f3c) e dourado (#c9a962)
 - [x] Nome "Leman Negócios Imobiliários" em todos os lugares
-- [x] Removido todas as referências a "Casa DF"
+- [x] Removido todas as referências a "Leman Negócios Imobiliários"
 
 ### Header/Footer
 - [x] Header com logo correta

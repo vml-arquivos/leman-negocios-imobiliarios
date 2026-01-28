@@ -82,7 +82,7 @@ Sistema completo de consultoria imobiliária de luxo em Brasília com CRM integr
 ## 📁 Estrutura do Projeto
 
 ```
-casadf/
+leman/
 ├── client/                    # Frontend React
 │   ├── public/               # Assets estáticos
 │   ├── src/
@@ -141,8 +141,8 @@ casadf/
 
 1. **Clone o repositório:**
 ```bash
-git clone https://github.com/seu-usuario/casadf.git
-cd casadf
+git clone https://github.com/seu-usuario/leman.git
+cd leman
 ```
 
 2. **Instale as dependências:**
@@ -362,17 +362,17 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## 👤 Autor
 
-**Casa DF**
+**Leman Negócios Imobiliários**
 - CRECI: 17921-DF
-- Email: contato@casadf.com.br
+- Email: contato@lemannegocios.com.br
 - Telefone: (61) 3254-4464
-- Instagram: [@casadf](https://instagram.com/casadf)
+- Instagram: [@leman](https://instagram.com/leman)
 
 ## 🆘 Suporte
 
-- **Issues:** https://github.com/seu-usuario/casadf/issues
-- **Email:** suporte@casadf.com.br
-- **Documentação:** https://docs.casadf.com.br
+- **Issues:** https://github.com/seu-usuario/leman/issues
+- **Email:** suporte@lemannegocios.com.br
+- **Documentação:** https://docs.lemannegocios.com.br
 
 ## 📚 Documentação Adicional
 

@@ -1,4 +1,4 @@
-# 🐳 Deploy com Docker - Casa DF
+# 🐳 Deploy com Docker - Leman Negócios Imobiliários
 
 Guia completo para fazer deploy da aplicação usando Docker e Docker Compose.
 
@@ -38,8 +38,8 @@ sudo chmod +x /usr/local/bin/docker-compose
 ### 1. Clone o Repositório
 
 ```bash
-git clone https://github.com/seu-usuario/casadf.git
-cd casadf
+git clone https://github.com/seu-usuario/leman.git
+cd leman
 ```
 
 ### 2. Configure as Variáveis de Ambiente
@@ -137,10 +137,10 @@ docker-compose build app
 docker-compose exec app pnpm db:push
 
 # Backup do banco
-docker-compose exec db mysqldump -u corretor -p casadf > backup.sql
+docker-compose exec db mysqldump -u corretor -p leman > backup.sql
 
 # Restaurar backup
-docker-compose exec -T db mysql -u corretor -p casadf < backup.sql
+docker-compose exec -T db mysql -u corretor -p leman < backup.sql
 
 # Acessar MySQL CLI
 docker-compose exec db mysql -u corretor -p
@@ -224,8 +224,8 @@ ssh user@seu-servidor.com
 
 2. **Clone e configure:**
 ```bash
-git clone https://github.com/seu-usuario/casadf.git
-cd casadf
+git clone https://github.com/seu-usuario/leman.git
+cd leman
 cp .env.example .env
 nano .env  # Configure variáveis
 ```
@@ -239,7 +239,7 @@ nano .env  # Configure variáveis
 ```nginx
 server {
     listen 80;
-    server_name casadf.com.br;
+    server_name lemannegocios.com.br;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -255,7 +255,7 @@ server {
 5. **Configure SSL (Let's Encrypt):**
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d casadf.com.br
+sudo certbot --nginx -d lemannegocios.com.br
 ```
 
 ### AWS ECS
@@ -263,9 +263,9 @@ sudo certbot --nginx -d casadf.com.br
 1. **Build e push para ECR:**
 ```bash
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-docker build -t casadf .
-docker tag casadf:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/casadf:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/casadf:latest
+docker build -t leman .
+docker tag leman:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/leman:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/leman:latest
 ```
 
 2. **Crie task definition e service no ECS**
@@ -274,9 +274,9 @@ docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/casadf:latest
 
 ```bash
 # Build e deploy
-gcloud builds submit --tag gcr.io/PROJECT-ID/casadf
-gcloud run deploy casadf \
-  --image gcr.io/PROJECT-ID/casadf \
+gcloud builds submit --tag gcr.io/PROJECT-ID/leman
+gcloud run deploy leman \
+  --image gcr.io/PROJECT-ID/leman \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated
@@ -286,14 +286,14 @@ gcloud run deploy casadf \
 
 ```bash
 # Build e push
-az acr build --registry <registry-name> --image casadf .
+az acr build --registry <registry-name> --image leman .
 
 # Deploy
 az container create \
   --resource-group myResourceGroup \
-  --name casadf \
-  --image <registry-name>.azurecr.io/casadf \
-  --dns-name-label casadf \
+  --name leman \
+  --image <registry-name>.azurecr.io/leman \
+  --dns-name-label leman \
   --ports 3000
 ```
 
@@ -388,6 +388,6 @@ docker-compose up -d --build
 
 ## 🆘 Suporte
 
-- **Issues:** https://github.com/seu-usuario/casadf/issues
-- **Email:** suporte@casadf.com.br
-- **Documentação:** https://docs.casadf.com.br
+- **Issues:** https://github.com/seu-usuario/leman/issues
+- **Email:** suporte@lemannegocios.com.br
+- **Documentação:** https://docs.lemannegocios.com.br

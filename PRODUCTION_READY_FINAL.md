@@ -88,16 +88,16 @@ ALTER TABLE `site_settings`
 
 #### Seed de Dados Padrão
 ```sql
--- Configurações padrão Casa DF
+-- Configurações padrão Leman Negócios Imobiliários
 INSERT IGNORE INTO `site_settings` (
   `id`, `companyName`, `siteTitle`, `themeStyle`, `primaryColor`,
   `heroTitle`, `heroSubtitle`, `aboutSectionTitle`, `aboutSectionContent`
 ) VALUES (
-  1, 'Casa DF Imóveis', 'Casa DF - Imóveis em Brasília',
+  1, 'Leman Negócios Imobiliários Imóveis', 'Leman Negócios Imobiliários - Imóveis em Brasília',
   'modern', '#0f172a',
   'Encontre Seu Imóvel em Brasília',
-  'A Casa DF Imóveis oferece as melhores opções...',
-  'Casa DF Imóveis',
+  'A Leman Negócios Imobiliários Imóveis oferece as melhores opções...',
+  'Leman Negócios Imobiliários Imóveis',
   'Sua imobiliária de confiança em Brasília...'
 );
 ```
@@ -416,14 +416,14 @@ const settingsRouter = router({
 │  Tab 2: Seção Hero                          │
 │  ┌───────────────────────────────────────┐  │
 │  │ Título: [Encontre Seu Imóvel...]     │  │
-│  │ Subtítulo: [A Casa DF oferece...]    │  │
+│  │ Subtítulo: [A Leman Negócios Imobiliários oferece...]    │  │
 │  │ Imagem: [https://example.com/...]    │  │
 │  │ [Preview da Imagem]                  │  │
 │  └───────────────────────────────────────┘  │
 │                                             │
 │  Tab 3: Seção Sobre                         │
 │  ┌───────────────────────────────────────┐  │
-│  │ Título: [Casa DF Imóveis]            │  │
+│  │ Título: [Leman Negócios Imobiliários Imóveis]            │  │
 │  │ Conteúdo: [Sua imobiliária...]       │  │
 │  │ Imagem: [https://example.com/...]    │  │
 │  │ [Preview da Imagem]                  │  │
@@ -494,7 +494,7 @@ const navigation = [
 
 ```tsx
 <h1>Encontre Seu Imóvel em Brasília</h1>
-<p>A Casa DF Imóveis oferece...</p>
+<p>A Leman Negócios Imobiliários Imóveis oferece...</p>
 <div style={{ backgroundImage: 'url(/hero-mansion.jpg)' }} />
 ```
 
@@ -504,7 +504,7 @@ const navigation = [
 const { data: settings } = trpc.settings.get.useQuery();
 
 <h1>{settings?.heroTitle || 'Encontre Seu Imóvel em Brasília'}</h1>
-<p>{settings?.heroSubtitle || 'A Casa DF Imóveis oferece...'}</p>
+<p>{settings?.heroSubtitle || 'A Leman Negócios Imobiliários Imóveis oferece...'}</p>
 <div style={{ 
   backgroundImage: `url(${settings?.heroBackgroundImage || '/hero-mansion.jpg'})` 
 }} />
@@ -520,7 +520,7 @@ const { data: settings } = trpc.settings.get.useQuery();
 **Seção Sobre - Antes:**
 
 ```tsx
-<h2>Casa DF Imóveis</h2>
+<h2>Leman Negócios Imobiliários Imóveis</h2>
 <p>Sua imobiliária de confiança...</p>
 <div className="bg-gradient-to-br from-primary/20 to-primary/5">
   {/* Placeholder */}
@@ -530,12 +530,12 @@ const { data: settings } = trpc.settings.get.useQuery();
 **Seção Sobre - Depois:**
 
 ```tsx
-<h2>{settings?.aboutSectionTitle || 'Casa DF Imóveis'}</h2>
+<h2>{settings?.aboutSectionTitle || 'Leman Negócios Imobiliários Imóveis'}</h2>
 <div className="whitespace-pre-line">
   {settings?.aboutSectionContent || 'Sua imobiliária de confiança...'}
 </div>
 {settings?.aboutSectionImage ? (
-  <img src={settings.aboutSectionImage} alt="Sobre Casa DF" />
+  <img src={settings.aboutSectionImage} alt="Sobre Leman Negócios Imobiliários" />
 ) : (
   <div className="bg-gradient-to-br from-primary/20 to-primary/5">
     {/* Placeholder */}
@@ -627,14 +627,14 @@ function App() {
 ### 1️⃣ Aplicar Migrações
 
 ```bash
-cd /path/to/casadf
+cd /path/to/leman
 pnpm install
 pnpm run db:push
 ```
 
 Ou manualmente:
 ```bash
-mysql -u user -p casadf < drizzle/0009_production_ready_final.sql
+mysql -u user -p leman < drizzle/0009_production_ready_final.sql
 ```
 
 ---
@@ -645,7 +645,7 @@ mysql -u user -p casadf < drizzle/0009_production_ready_final.sql
 
 ```env
 # Database
-DATABASE_URL=postgresql://user:pass@host:5432/casadf
+DATABASE_URL=postgresql://user:pass@host:5432/leman
 
 # Server
 PORT=5001
@@ -656,7 +656,7 @@ N8N_LEAD_WEBHOOK_URL=https://n8n.example.com/webhook/lead
 VITE_N8N_CHAT_WEBHOOK_URL=https://n8n.example.com/webhook/chat
 
 # Storage S3
-STORAGE_BUCKET=casadf-images
+STORAGE_BUCKET=leman-images
 STORAGE_REGION=sa-east-1
 STORAGE_ENDPOINT=https://s3.sa-east-1.amazonaws.com
 STORAGE_ACCESS_KEY=<aws_access_key>
@@ -687,8 +687,8 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 **Opção 2: Via SQL**
 ```sql
 INSERT INTO users (name, email, password, loginMethod, role) VALUES (
-  'Admin Casa DF',
-  'admin@casadf.com.br',
+  'Admin Leman Negócios Imobiliários',
+  'admin@lemannegocios.com.br',
   '<hash_da_senha>',
   'local',
   'admin'
@@ -856,7 +856,7 @@ pnpm run start
 
 **MISSÃO CRÍTICA: ✅ CONCLUÍDA COM SUCESSO**
 
-O SaaS Imobiliário Casa DF está **100% pronto para produção** com:
+O SaaS Imobiliário Leman Negócios Imobiliários está **100% pronto para produção** com:
 
 1. ✅ **Sistema de autenticação local completo**
    - Login com email e senha
@@ -935,7 +935,7 @@ O SaaS Imobiliário Casa DF está **100% pronto para produção** com:
 
 ---
 
-**Desenvolvido com ❤️ para Casa DF Imóveis**
+**Desenvolvido com ❤️ para Leman Negócios Imobiliários Imóveis**
 
 **Tech Lead:** Manus AI Assistant
 **Data:** 10 de Dezembro de 2025

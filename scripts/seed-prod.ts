@@ -20,7 +20,7 @@ async function seedDatabase() {
     const adminPassword = await hashPassword("admin123");
     
     const existingAdmin = await db.query.users.findFirst({
-      where: eq(users.email, "admin@casadf.com.br"),
+      where: eq(users.email, "admin@lemannegocios.com.br"),
     });
 
     let adminId: number;
@@ -28,15 +28,15 @@ async function seedDatabase() {
       const [admin] = await db
         .insert(users)
         .values({
-          name: "Administrador CasaDF",
-          email: "admin@casadf.com.br",
+          name: "Administrador Leman",
+          email: "admin@lemannegocios.com.br",
           password: adminPassword,
           role: "admin",
           loginMethod: "local",
         })
         .$returningId();
       adminId = admin.id;
-      console.log(`✅ Admin criado: admin@casadf.com.br\n`);
+      console.log(`✅ Admin criado: admin@lemannegocios.com.br\n`);
     } else {
       adminId = existingAdmin.id;
       console.log(`✅ Admin já existe\n`);
@@ -51,7 +51,7 @@ async function seedDatabase() {
     const owners = [];
     for (let i = 1; i <= 3; i++) {
       const existingOwner = await db.query.users.findFirst({
-        where: eq(users.email, `proprietario${i}@casadf.com.br`),
+        where: eq(users.email, `proprietario${i}@lemannegocios.com.br`),
       });
 
       if (!existingOwner) {
@@ -59,7 +59,7 @@ async function seedDatabase() {
           .insert(users)
           .values({
             name: `Proprietário ${i}`,
-            email: `proprietario${i}@casadf.com.br`,
+            email: `proprietario${i}@lemannegocios.com.br`,
             password: ownerPassword,
             role: "user",
             loginMethod: "local",
@@ -427,7 +427,7 @@ async function seedDatabase() {
         slug: "como-financiar-imovel-brasilia",
         content: "Guia completo sobre as melhores opções de financiamento imobiliário no Distrito Federal. Conheça as taxas dos principais bancos e como escolher a melhor opção para você.",
         excerpt: "Descubra as melhores formas de financiar seu imóvel em Brasília",
-        author: "Casa DF",
+        author: "Leman Negócios Imobiliários",
         featured: true,
         published: true,
         status: "published",
@@ -437,7 +437,7 @@ async function seedDatabase() {
         slug: "dicas-alugar-imovel-seguranca",
         content: "Saiba quais são os cuidados essenciais ao alugar um imóvel. Desde a análise de documentos até a assinatura do contrato, confira todas as dicas importantes.",
         excerpt: "Proteja-se ao alugar um imóvel seguindo estas dicas",
-        author: "Casa DF",
+        author: "Leman Negócios Imobiliários",
         featured: true,
         published: true,
         status: "published",
@@ -457,7 +457,7 @@ async function seedDatabase() {
 
     console.log("✅ ✅ ✅ SEED CONCLUÍDO COM SUCESSO! ✅ ✅ ✅\n");
     console.log("📊 Resumo:");
-    console.log(`   - 1 Admin (admin@casadf.com.br / admin123)`);
+    console.log(`   - 1 Admin (admin@lemannegocios.com.br / admin123)`);
     console.log(`   - 3 Proprietários`);
     console.log(`   - 6 Imóveis (3 venda + 3 aluguel)`);
     console.log(`   - 5 Leads`);

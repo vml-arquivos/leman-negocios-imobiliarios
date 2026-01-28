@@ -233,7 +233,7 @@ export default function About() {
                 </a>
               </Button>
               <Button size="lg" variant="outline" asChild className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                <a href="mailto:contato@casadf.com.br">
+                <a href="mailto:contato@lemannegocios.com.br">
                   <Mail className="w-5 h-5 mr-2" />
                   Enviar Email
                 </a>
