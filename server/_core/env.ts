@@ -14,7 +14,7 @@ function getOptionalEnv(key: string, defaultValue: string = ""): string {
 export const ENV = {
   // Variáveis obrigatórias
   appId: getRequiredEnv("VITE_APP_ID"),
-  cookieSecret: getRequiredEnv("JWT_SECRET"),
+  jwtSecret: getRequiredEnv("JWT_SECRET"),
   databaseUrl: getRequiredEnv("DATABASE_URL"),
   
   // Variáveis opcionais
@@ -38,7 +38,7 @@ console.log("🔧 [ENV] Variáveis de Ambiente Carregadas");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 console.log(`✅ APP_ID: ${ENV.appId}`);
 console.log(`✅ DATABASE_URL: ${ENV.databaseUrl ? "Configurado" : "❌ Vazio"}`);
-console.log(`✅ JWT_SECRET: ${ENV.cookieSecret ? "Configurado (oculto)" : "❌ Vazio"}`);
+console.log(`✅ JWT_SECRET: ${ENV.jwtSecret ? "Configurado (oculto)" : "❌ Vazio"}`);
 console.log(`ℹ️  OAUTH_SERVER_URL: ${ENV.oAuthServerUrl || "Não configurado (opcional)"}`);
 console.log(`ℹ️  NODE_ENV: ${process.env.NODE_ENV || "development"}`);
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

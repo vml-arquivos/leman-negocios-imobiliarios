@@ -154,7 +154,7 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = ENV.cookieSecret;
+    const secret = ENV.jwtSecret;
     return new TextEncoder().encode(secret);
   }
 

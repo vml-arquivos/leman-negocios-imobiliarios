@@ -15,6 +15,14 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data) => {
+      // Armazenar token e usuário no localStorage
+      if (data.token) {
+        localStorage.setItem("leman_token", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("leman_user", JSON.stringify(data.user));
+      }
+      
       toast.success(`Bem-vindo, ${data.user.name}!`);
       setIsLoading(false);
       // Redirecionar para área do corretor

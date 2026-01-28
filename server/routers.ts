@@ -64,6 +64,7 @@ const authRouter = router({
       
       return {
         success: true,
+        token: sessionToken,
         user: {
           id: user.id,
           name: user.name,
@@ -127,6 +128,7 @@ const authRouter = router({
       
       return {
         success: true,
+        token: sessionToken,
         user: {
           id: user.id,
           name: user.name,

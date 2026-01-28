@@ -17,6 +17,14 @@ export default function Register() {
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: (data) => {
+      // Armazenar token e usuário no localStorage
+      if (data.token) {
+        localStorage.setItem("leman_token", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("leman_user", JSON.stringify(data.user));
+      }
+      
       toast.success(`Conta criada com sucesso! Bem-vindo, ${data.user.name}!`);
       // Redirecionar para dashboard se admin, senão para home
       if (data.user.role === "admin") {
