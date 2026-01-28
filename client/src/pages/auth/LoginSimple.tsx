@@ -13,15 +13,13 @@ export default function LoginSimple() {
     setError("");
     setLoading(true);
 
-    // Simular delay de rede
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const result = await login(email, password);
 
-    const success = login(email, password);
-
-    if (success) {
+    if (result.success) {
+      // Redirecionar para o dashboard
       window.location.href = "/admin";
     } else {
-      setError("Email ou senha incorretos");
+      setError(result.error || "Erro ao fazer login");
       setLoading(false);
     }
   };
@@ -86,7 +84,7 @@ export default function LoginSimple() {
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <div className="text-xs text-gray-500 space-y-2">
-            <p className="font-semibold">Credenciais de teste:</p>
+            <p className="font-semibold">Credenciais de acesso:</p>
             <p>Email: evandro@lemannegocios.com.br</p>
             <p>Senha: admin123</p>
           </div>

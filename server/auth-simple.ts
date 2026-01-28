@@ -101,8 +101,7 @@ router.post("/login", async (req: Request, res: Response) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
-          avatarUrl: user.avatarUrl
+          role: user.role
         }
       }
     });
@@ -159,8 +158,7 @@ router.get("/me", async (req: Request, res: Response) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
-          avatarUrl: user.avatarUrl
+          role: user.role
         }
       }
     });
