@@ -67,7 +67,7 @@ export default function Header() {
           <Link href="/">
             <div className="flex items-center cursor-pointer">
               <img 
-                src="/logo.png" 
+                src="/logo-leman.jpg" 
                 alt="Leman Negócios Imobiliários" 
                 className="h-12 md:h-16 w-auto object-contain" 
               />
@@ -87,10 +87,10 @@ export default function Header() {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/admin">
+            <Link href="/auth/login">
               <Button variant="outline" className="border-[#c9a962]/50 text-[#c9a962] hover:bg-[#c9a962]/10 hover:border-[#c9a962]">
                 <LayoutDashboard className="h-4 w-4 mr-2" />
-                Dashboard CRM
+                Área do Corretor
               </Button>
             </Link>
             <Link href="/imoveis">

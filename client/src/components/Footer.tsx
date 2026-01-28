@@ -12,7 +12,7 @@ export default function Footer() {
           {/* Sobre */}
           <div>
             <img 
-              src="/logo.png" 
+              src="/logo-leman.jpg" 
               alt="Leman Negócios Imobiliários" 
               className="h-16 w-auto mb-4"
             />

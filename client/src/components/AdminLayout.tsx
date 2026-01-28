@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigation = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Área do Corretor", href: "/admin", icon: LayoutDashboard },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "Imóveis", href: "/admin/properties", icon: Building2 },
     { name: "Leads", href: "/admin/leads", icon: Users },

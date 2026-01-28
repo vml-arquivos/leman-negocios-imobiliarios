@@ -34,6 +34,7 @@ import SiteCustomization from "./pages/admin/SiteCustomization";
 import FinancialDashboardDemo from "./pages/admin/FinancialDashboardDemo";
 import OwnerPortal from "./pages/OwnerPortal";
 import Login from "./pages/auth/Login";
+import Settings from "./pages/admin/Settings";
 
 function Router() {
   return (
@@ -142,6 +143,13 @@ function Router() {
         {() => (
           <AdminLayout>
             <SiteCustomization />
+          </AdminLayout>
+        )}
+      </Route>
+      <Route path="/admin/settings">
+        {() => (
+          <AdminLayout>
+            <Settings />
           </AdminLayout>
         )}
       </Route>
