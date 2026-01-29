@@ -14,6 +14,7 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -155,6 +156,16 @@ class SDKServer {
 
   private getSessionSecret() {
     const secret = ENV.jwtSecret;
+    
+    // Validação crítica
+    if (!secret || secret.trim() === "") {
+      console.error("❌ [SDK] ERRO CRÍTICO: JWT_SECRET está vazio!");
+      console.error("❌ [SDK] ENV.jwtSecret:", secret);
+      console.error("❌ [SDK] process.env.JWT_SECRET:", process.env.JWT_SECRET);
+      throw new Error("JWT_SECRET não está configurado corretamente");
+    }
+    
+    console.log(`🔐 [SDK] JWT_SECRET carregado com sucesso (${secret.length} caracteres)`);
     return new TextEncoder().encode(secret);
   }
 
@@ -181,19 +192,29 @@ class SDKServer {
     payload: SessionPayload,
     options: { expiresInMs?: number } = {}
   ): Promise<string> {
-    const issuedAt = Date.now();
-    const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
-    const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
-    const secretKey = this.getSessionSecret();
+    console.log("[Auth] Tentativa de login:", payload.openId);
+    
+    try {
+      const issuedAt = Date.now();
+      const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
+      const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1000);
+      const secretKey = this.getSessionSecret();
 
-    return new SignJWT({
-      openId: payload.openId,
-      appId: payload.appId,
-      name: payload.name,
-    })
-      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-      .setExpirationTime(expirationSeconds)
-      .sign(secretKey);
+      const token = await new SignJWT({
+        openId: payload.openId,
+        appId: payload.appId,
+        name: payload.name,
+      })
+        .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+        .setExpirationTime(expirationSeconds)
+        .sign(secretKey);
+      
+      console.log("[Auth] Token gerado com sucesso");
+      return token;
+    } catch (error) {
+      console.error("[Auth] Erro no login:", error);
+      throw error;
+    }
   }
 
   async verifySession(
