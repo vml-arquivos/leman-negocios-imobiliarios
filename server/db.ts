@@ -93,7 +93,7 @@ export const db = {
   updateUserLastSignIn: async (userId: number) => {
     const dbInstance = await getDb();
     if (!dbInstance) return;
-    await dbInstance.update(users).set({ lastSignIn: new Date() }).where(eq(users.id, userId));
+    await dbInstance.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, userId));
   },
   createUser: async (userData: InsertUser) => {
     const dbInstance = await getDb();
