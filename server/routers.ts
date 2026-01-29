@@ -22,8 +22,10 @@ const authRouter = router({
       password: z.string().min(1, "Senha obrigatória"),
     }))
     .mutation(async ({ input, ctx }) => {
-      const { hashPassword, verifyPassword, validateEmail } = await import("./auth");
-      const { sdk } = await import("./_core/sdk");
+      console.log("[Auth] Tentativa de login:", input.email);
+      
+      const { verifyPassword, validateEmail } = await import("./auth");
+      const { createToken } = await import("./_core/jwt");
       
       // Validar email
       if (!validateEmail(input.email)) {
@@ -33,28 +35,35 @@ const authRouter = router({
       // Buscar usuário por email
       const user = await db.getUserByEmail(input.email);
       if (!user) {
+        console.log("[Auth] Usuário não encontrado:", input.email);
         throw new Error("Email ou senha incorretos");
       }
       
       // Verificar senha
       if (!user.password) {
-        throw new Error("Usuário não possui senha configurada. Use login OAuth.");
+        console.log("[Auth] Usuário sem senha:", input.email);
+        throw new Error("Usuário não possui senha configurada");
       }
       
       const isValid = await verifyPassword(input.password, user.password);
       if (!isValid) {
+        console.log("[Auth] Senha incorreta:", input.email);
         throw new Error("Email ou senha incorretos");
       }
       
-      // Criar sessão JWT (usando openId como user.id)
-      const sessionToken = await sdk.createSessionToken(
-        user.openId || String(user.id),
-        { name: user.name || "" }
-      );
+      // Criar token JWT simples
+      const token = createToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name || "",
+        role: user.role,
+      });
+      
+      console.log("[Auth] Token criado com sucesso para:", input.email);
       
       // Setar cookie
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, {
+      ctx.res.cookie(COOKIE_NAME, token, {
         ...cookieOptions,
         maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano
       });
@@ -62,9 +71,11 @@ const authRouter = router({
       // Atualizar lastSignedIn
       await db.updateUserLastSignIn(user.id);
       
+      console.log("[Auth] Login bem-sucedido:", input.email);
+      
       return {
         success: true,
-        token: sessionToken,
+        token,
         user: {
           id: user.id,
           name: user.name,
@@ -82,7 +93,7 @@ const authRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const { hashPassword, validatePassword, validateEmail } = await import("./auth");
-      const { sdk } = await import("./_core/sdk");
+      const { createToken } = await import("./_core/jwt");
       
       // Validar email
       if (!validateEmail(input.email)) {
@@ -110,25 +121,27 @@ const authRouter = router({
         email: input.email,
         password: hashedPassword,
         loginMethod: "local",
-        role: "user", // Primeiro usuário pode ser admin manualmente no DB
+        role: "user",
       });
       
-      // Criar sessão JWT
-      const sessionToken = await sdk.createSessionToken(
-        user.openId || String(user.id),
-        { name: user.name || "" }
-      );
+      // Criar token JWT simples
+      const token = createToken({
+        userId: user.id,
+        email: user.email,
+        name: user.name || "",
+        role: user.role,
+      });
       
       // Setar cookie
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, {
+      ctx.res.cookie(COOKIE_NAME, token, {
         ...cookieOptions,
         maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano
       });
       
       return {
         success: true,
-        token: sessionToken,
+        token,
         user: {
           id: user.id,
           name: user.name,
