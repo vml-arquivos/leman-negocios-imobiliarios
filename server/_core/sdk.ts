@@ -155,6 +155,12 @@ class SDKServer {
   }
 
   private getSessionSecret() {
+    console.log("🔍 [SDK] getSessionSecret() chamado");
+    console.log("🔍 [SDK] process.env.JWT_SECRET:", process.env.JWT_SECRET);
+    console.log("🔍 [SDK] ENV.jwtSecret:", ENV.jwtSecret);
+    console.log("🔍 [SDK] typeof ENV.jwtSecret:", typeof ENV.jwtSecret);
+    console.log("🔍 [SDK] ENV.jwtSecret.length:", ENV.jwtSecret?.length);
+    
     const secret = ENV.jwtSecret;
     
     // Validação crítica
