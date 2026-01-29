@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
+import jwt from "jsonwebtoken";
 import { ENV } from "./_core/env";
 import { db } from "./db";
 
@@ -15,30 +15,53 @@ const router = Router();
 // CONFIGURAÇÕES JWT
 // ============================================
 
-const JWT_SECRET = new TextEncoder().encode(ENV.JWT_SECRET);
-const JWT_EXPIRES_IN = "7d"; // 7 dias
+const JWT_EXPIRES_IN = "365d"; // 1 ano
+
+interface JWTPayload {
+  userId: number;
+  email: string;
+  role: string;
+}
 
 /**
  * Gerar token JWT
  */
-async function generateToken(userId: number, email: string, role: string): Promise<string> {
-  const token = await new SignJWT({ userId, email, role })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRES_IN)
-    .sign(JWT_SECRET);
+function generateToken(userId: number, email: string, role: string): string {
+  const secret = ENV.jwtSecret;
   
-  return token;
+  if (!secret || secret.trim() === "") {
+    throw new Error("JWT_SECRET não configurado");
+  }
+
+  return jwt.sign(
+    { userId, email, role },
+    secret,
+    {
+      expiresIn: JWT_EXPIRES_IN,
+      issuer: "leman-crm",
+    }
+  );
 }
 
 /**
  * Verificar token JWT
  */
-async function verifyToken(token: string): Promise<any> {
+function verifyToken(token: string): JWTPayload | null {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload;
+    const secret = ENV.jwtSecret;
+    
+    if (!secret || secret.trim() === "") {
+      console.error("[Auth] JWT_SECRET não configurado");
+      return null;
+    }
+
+    const decoded = jwt.verify(token, secret, {
+      issuer: "leman-crm",
+    }) as JWTPayload;
+
+    return decoded;
   } catch (error) {
+    console.error("[Auth] Erro ao verificar token:", error);
     return null;
   }
 }
@@ -72,6 +95,15 @@ router.post("/login", async (req: Request, res: Response) => {
       });
     }
 
+    // Verificar se usuário tem senha
+    if (!user.password) {
+      console.log(`[Auth] Usuário sem senha: ${email}`);
+      return res.status(401).json({
+        success: false,
+        message: "Usuário não possui senha configurada"
+      });
+    }
+
     // Verificar senha com bcrypt
     const passwordMatch = await bcrypt.compare(password, user.password);
 
@@ -84,7 +116,7 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     // Gerar token JWT
-    const token = await generateToken(user.id, user.email, user.role);
+    const token = generateToken(user.id, user.email, user.role);
 
     // Atualizar último login
     await db.updateUserLastSignIn(user.id);
@@ -101,7 +133,8 @@ router.post("/login", async (req: Request, res: Response) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          avatarUrl: user.avatarUrl,
         }
       }
     });
@@ -132,7 +165,7 @@ router.get("/me", async (req: Request, res: Response) => {
     }
 
     const token = authHeader.substring(7);
-    const payload = await verifyToken(token);
+    const payload = verifyToken(token);
 
     if (!payload) {
       return res.status(401).json({
@@ -158,7 +191,8 @@ router.get("/me", async (req: Request, res: Response) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          avatarUrl: user.avatarUrl,
         }
       }
     });
