@@ -155,16 +155,20 @@ router.post("/login", async (req: Request, res: Response) => {
 
 router.get("/me", async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Tentar pegar token do header Authorization OU do cookie
+    let token = req.headers.authorization?.replace("Bearer ", "");
+    
+    if (!token) {
+      // Tentar pegar do cookie app_session_id
+      token = req.cookies?.app_session_id;
+    }
+    
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: "Token não fornecido"
       });
     }
-
-    const token = authHeader.substring(7);
     const payload = verifyToken(token);
 
     if (!payload) {
