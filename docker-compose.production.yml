@@ -1,0 +1,207 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: leman-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: leman_imoveis
+      POSTGRES_USER: leman_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leman_secure_password_2026}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema-postgresql.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - leman-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leman_user -d leman_imoveis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: leman-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_password_2026}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - leman-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Leman Application
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: leman-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://leman_user:${POSTGRES_PASSWORD:-leman_secure_password_2026}@postgres:5432/leman_imoveis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password_2026}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      PUBLIC_URL: ${PUBLIC_URL:-https://lemanimoveis.com.br}
+      N8N_BASE_URL: ${N8N_BASE_URL}
+      N8N_API_KEY: ${N8N_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL}
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    ports:
+      - "5000:5000"
+    networks:
+      - leman-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # Nginx Reverse Proxy
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: leman-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./client/dist:/usr/share/nginx/html:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - leman-network
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # N8N (Opcional - Agentes de IA)
+  # ============================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: leman-n8n
+    restart: unless-stopped
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-n8n_secure_password}
+      N8N_HOST: ${N8N_HOST:-n8n.lemanimoveis.com.br}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://${N8N_HOST:-n8n.lemanimoveis.com.br}/
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: leman_user
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-leman_secure_password_2026}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - "5678:5678"
+    networks:
+      - leman-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - with-n8n
+
+  # ============================================
+  # Backup Service (Opcional)
+  # ============================================
+  backup:
+    image: prodrigestivill/postgres-backup-local:16-alpine
+    container_name: leman-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: leman_imoveis
+      POSTGRES_USER: leman_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leman_secure_password_2026}
+      SCHEDULE: "@daily" # Todo dia à meia-noite
+      BACKUP_KEEP_DAYS: 30
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - ./backups:/backups
+    networks:
+      - leman-network
+    depends_on:
+      - postgres
+    profiles:
+      - with-backup
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  n8n_data:
+    driver: local
+  nginx_cache:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  leman-network:
+    driver: bridge
