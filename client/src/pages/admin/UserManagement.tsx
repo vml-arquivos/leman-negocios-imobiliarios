@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AdminLayout from "@/components/AdminLayout";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,16 +106,16 @@ export default function UserManagement() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-      </AdminLayout>
+      </>
     );
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -394,6 +394,6 @@ export default function UserManagement() {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
+    </>
   );
 }

@@ -282,7 +282,7 @@ export default function ClientManagement() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="new" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                 <TabsTrigger value="new">
                   Novos ({newClients.length})
                 </TabsTrigger>

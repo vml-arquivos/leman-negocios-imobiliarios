@@ -30,7 +30,7 @@ export default function Settings() {
 
         {/* Tabs */}
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
             <TabsTrigger value="users">
               <Users className="h-4 w-4 mr-2" />
               Usuários
