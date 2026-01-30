@@ -15,7 +15,7 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (data) => {
-      // Armazenar token e usuário no localStorage
+      // Armazenar token e usuário no localStorage (para compatibilidade)
       if (data.token) {
         localStorage.setItem("leman_token", data.token);
       }
@@ -25,10 +25,11 @@ export default function Login() {
       
       toast.success(`Bem-vindo, ${data.user.name}!`);
       setIsLoading(false);
-      // Redirecionar para área do corretor
+      
+      // ✅ CORREÇÃO: Usar navegação React em vez de hard reload
       setTimeout(() => {
-        window.location.href = "/admin";
-      }, 500);
+        setLocation("/admin");
+      }, 100);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao fazer login");
@@ -43,7 +44,6 @@ export default function Login() {
     try {
       await loginMutation.mutateAsync({ email, password });
     } catch (error) {
-      // Erro já tratado no onError
       console.error("Login error:", error);
     }
   };

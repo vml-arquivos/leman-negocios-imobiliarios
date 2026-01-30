@@ -21,36 +21,31 @@ export function useAuth(options?: UseAuthOptions) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Carregar usuário do token
+  // Carregar usuário do cookie (via endpoint /api/auth/me)
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem("leman_token");
-      
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
+        // O cookie é enviado automaticamente pelo navegador
         const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+          credentials: "include", // Importante: envia cookies
           headers: {
-            "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           }
         });
 
         if (response.ok) {
           const data = await response.json();
-          setUser(data.data.user);
+          if (data.success && data.data?.user) {
+            setUser(data.data.user);
+          } else {
+            setUser(null);
+          }
         } else {
-          // Token inválido, remover
-          localStorage.removeItem("leman_token");
-          localStorage.removeItem("leman_user");
+          setUser(null);
         }
       } catch (err) {
         console.error("[Auth] Erro ao carregar usuário:", err);
-        localStorage.removeItem("leman_token");
-        localStorage.removeItem("leman_user");
+        setUser(null);
       }
 
       setLoading(false);
@@ -71,51 +66,19 @@ export function useAuth(options?: UseAuthOptions) {
   }, [redirectOnUnauthenticated, redirectPath, loading, user]);
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setError(null);
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Salvar token e usuário
-        localStorage.setItem("leman_token", data.data.token);
-        localStorage.setItem("leman_user", JSON.stringify(data.data.user));
-        setUser(data.data.user);
-        return { success: true };
-      } else {
-        const errorMsg = data.message || "Erro ao fazer login";
-        setError(errorMsg);
-        return { success: false, error: errorMsg };
-      }
-    } catch (err: any) {
-      const errorMsg = "Erro de conexão com o servidor";
-      setError(errorMsg);
-      console.error("[Auth] Erro no login:", err);
-      return { success: false, error: errorMsg };
-    }
+    // Esta função não é mais necessária aqui, pois o login é feito via tRPC no componente Login
+    return { success: false, error: "Use o componente Login para autenticar" };
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      const token = localStorage.getItem("leman_token");
-      
-      if (token) {
-        await fetch(`${API_BASE_URL}/api/auth/logout`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        });
-      }
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
     } catch (err) {
       console.error("[Auth] Erro no logout:", err);
     } finally {
@@ -127,28 +90,22 @@ export function useAuth(options?: UseAuthOptions) {
   }, []);
 
   const refresh = useCallback(async () => {
-    const token = localStorage.getItem("leman_token");
-    
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        credentials: "include",
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         }
       });
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.data.user);
-        localStorage.setItem("leman_user", JSON.stringify(data.data.user));
+        if (data.success && data.data?.user) {
+          setUser(data.data.user);
+        } else {
+          setUser(null);
+        }
       } else {
-        localStorage.removeItem("leman_token");
-        localStorage.removeItem("leman_user");
         setUser(null);
       }
     } catch (err) {
