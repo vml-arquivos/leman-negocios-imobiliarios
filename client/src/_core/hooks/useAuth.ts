@@ -65,10 +65,8 @@ export function useAuth(options?: UseAuthOptions) {
     window.location.href = redirectPath;
   }, [redirectOnUnauthenticated, redirectPath, loading, user]);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Esta função não é mais necessária aqui, pois o login é feito via tRPC no componente Login
-    return { success: false, error: "Use o componente Login para autenticar" };
-  }, []);
+  // Login é feito diretamente no componente Login.tsx via fetch
+  // Não precisa de função login aqui
 
   const logout = useCallback(async () => {
     try {
@@ -118,7 +116,6 @@ export function useAuth(options?: UseAuthOptions) {
     loading,
     error,
     isAuthenticated: Boolean(user),
-    login,
     logout,
     refresh,
   };
