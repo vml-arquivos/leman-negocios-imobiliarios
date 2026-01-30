@@ -884,4 +884,4 @@ export const ownerTransfers = pgTable("owner_transfers", {
 });
 
 export type OwnerTransfer = typeof ownerTransfers.$inferSelect;
-export type InsertOwnerTransfer = typeof ownerTransfers.$inferInsert;'''
+export type InsertOwnerTransfer = typeof ownerTransfers.$inferInsert;
