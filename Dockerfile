@@ -12,7 +12,7 @@ COPY patches ./patches
 
 # Instalar pnpm e dependências
 RUN npm install -g pnpm@latest && \
-    pnpm install --no-frozen-lockfile
+    pnpm install --frozen-lockfile
 
 # Copiar código fonte do cliente
 COPY client ./client
@@ -37,7 +37,7 @@ COPY patches ./patches
 
 # Instalar pnpm e dependências
 RUN npm install -g pnpm@latest && \
-    pnpm install --no-frozen-lockfile
+    pnpm install --frozen-lockfile
 
 # Copiar código fonte do servidor
 COPY server ./server
