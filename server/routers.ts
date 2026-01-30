@@ -6,8 +6,8 @@ import { z } from "zod";
 import * as db from "./db";
 import * as rentalMgmt from "./rental-management";
 import { getDb } from "./db";
-import { eq, desc } from "drizzle-orm";
-import { analyticsEvents, campaignSources, transactions, commissions, reviews, financingSimulations, leads, interactions } from "../drizzle/schema";
+import { eq, desc, gte, sql } from "drizzle-orm";
+import { analyticsEvents, campaignSources, transactions, commissions, reviews, financingSimulations, leads, interactions, landlords, tenants, rentalPayments, propertyExpenses, landlordTransfers, rentalContracts, properties } from "../drizzle/schema";
 
 // ============================================
 // AUTH ROUTER
@@ -1553,6 +1553,251 @@ const financialRouter = router({
         .limit(input.limit);
     }),
 
+  // ============================================
+  // FILTROS GRANULARES (CRM 360º)
+  // ============================================
+
+  // Obter transações com filtros avançados
+  getFilteredTransactions: protectedProcedure
+    .input(z.object({
+      ownerId: z.number().optional(),
+      propertyId: z.number().optional(),
+      type: z.string().optional(), // 'revenue', 'expense', 'transfer', 'commission'
+      category: z.string().optional(),
+      status: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      limit: z.number().optional().default(100),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem ver transações');
+      }
+      
+      const db = await getDb();
+      if (!db) return { items: [], summary: {} };
+      
+      // Buscar todas as transações
+      let allTransactions = await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+      
+      // Aplicar filtros
+      if (input.ownerId) {
+        allTransactions = allTransactions.filter(t => t.ownerId === input.ownerId);
+      }
+      if (input.propertyId) {
+        allTransactions = allTransactions.filter(t => t.propertyId === input.propertyId);
+      }
+      if (input.type) {
+        allTransactions = allTransactions.filter(t => t.type === input.type);
+      }
+      if (input.category) {
+        allTransactions = allTransactions.filter(t => t.category === input.category);
+      }
+      if (input.status) {
+        allTransactions = allTransactions.filter(t => t.status === input.status);
+      }
+      if (input.startDate) {
+        const startDate = new Date(input.startDate);
+        allTransactions = allTransactions.filter(t => new Date(t.createdAt) >= startDate);
+      }
+      if (input.endDate) {
+        const endDate = new Date(input.endDate);
+        allTransactions = allTransactions.filter(t => new Date(t.createdAt) <= endDate);
+      }
+      
+      // Calcular resumo
+      const summary = {
+        totalRevenue: allTransactions
+          .filter(t => t.type === 'revenue')
+          .reduce((sum, t) => sum + Number(t.amount), 0),
+        totalExpenses: allTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + Number(t.amount), 0),
+        totalTransfers: allTransactions
+          .filter(t => t.type === 'transfer')
+          .reduce((sum, t) => sum + Number(t.amount), 0),
+        totalCommissions: allTransactions
+          .filter(t => t.type === 'commission')
+          .reduce((sum, t) => sum + Number(t.amount), 0),
+        count: allTransactions.length,
+      };
+      
+      return {
+        items: allTransactions.slice(0, input.limit),
+        summary,
+      };
+    }),
+
+  // Obter relatório por proprietário
+  getOwnerReport: protectedProcedure
+    .input(z.object({
+      ownerId: z.number(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem ver relatórios');
+      }
+      
+      const db = await getDb();
+      if (!db) return null;
+      
+      // Buscar dados do proprietário
+      const landlordData = await db.select().from(landlords).where(eq(landlords.id, input.ownerId)).limit(1);
+      if (!landlordData[0]) return null;
+      
+      // Buscar pagamentos de aluguel
+      const payments = await db.select().from(rentalPayments).where(eq(rentalPayments.landlordId, input.ownerId));
+      
+      // Buscar despesas
+      const expenses = await db.select().from(propertyExpenses).where(eq(propertyExpenses.landlordId, input.ownerId));
+      
+      // Buscar repasses
+      const transfers = await db.select().from(landlordTransfers).where(eq(landlordTransfers.landlordId, input.ownerId));
+      
+      // Buscar contratos
+      const contractsData = await db.select().from(rentalContracts).where(eq(rentalContracts.landlordId, input.ownerId));
+      
+      // Calcular totais
+      const totalRentReceived = payments
+        .filter(p => p.status === 'pago')
+        .reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+      
+      const totalCommissions = payments
+        .filter(p => p.status === 'pago')
+        .reduce((sum, p) => sum + (p.commissionAmount || 0), 0);
+      
+      const totalExpenses = expenses
+        .filter(e => e.status === 'pago')
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
+      
+      const totalTransferred = transfers
+        .filter(t => t.status === 'concluido')
+        .reduce((sum, t) => sum + (t.netAmount || 0), 0);
+      
+      return {
+        owner: landlordData[0],
+        contracts: contractsData,
+        payments,
+        expenses,
+        transfers,
+        summary: {
+          totalRentReceived,
+          totalCommissions,
+          totalExpenses,
+          totalTransferred,
+          pendingTransfer: totalRentReceived - totalCommissions - totalExpenses - totalTransferred,
+          activeContracts: contractsData.filter(c => c.status === 'ativo').length,
+        },
+      };
+    }),
+
+  // Obter relatório por imóvel
+  getPropertyReport: protectedProcedure
+    .input(z.object({
+      propertyId: z.number(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem ver relatórios');
+      }
+      
+      const db = await getDb();
+      if (!db) return null;
+      
+      // Buscar dados do imóvel
+      const propertyData = await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1);
+      if (!propertyData[0]) return null;
+      
+      // Buscar pagamentos de aluguel
+      const payments = await db.select().from(rentalPayments).where(eq(rentalPayments.propertyId, input.propertyId));
+      
+      // Buscar despesas
+      const expenses = await db.select().from(propertyExpenses).where(eq(propertyExpenses.propertyId, input.propertyId));
+      
+      // Buscar contratos
+      const contractsData = await db.select().from(rentalContracts).where(eq(rentalContracts.propertyId, input.propertyId));
+      
+      // Calcular totais
+      const totalRentReceived = payments
+        .filter(p => p.status === 'pago')
+        .reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+      
+      const totalExpenses = expenses
+        .filter(e => e.status === 'pago')
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
+      
+      const totalCommissions = payments
+        .filter(p => p.status === 'pago')
+        .reduce((sum, p) => sum + (p.commissionAmount || 0), 0);
+      
+      return {
+        property: propertyData[0],
+        contracts: contractsData,
+        payments,
+        expenses,
+        summary: {
+          totalRentReceived,
+          totalExpenses,
+          totalCommissions,
+          netProfit: totalRentReceived - totalExpenses,
+          occupancyRate: contractsData.filter(c => c.status === 'ativo').length > 0 ? 100 : 0,
+        },
+      };
+    }),
+
+  // Listar proprietários para filtro
+  getOwnersList: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem ver proprietários');
+      }
+      
+      const db = await getDb();
+      if (!db) return [];
+      
+      return db.select({
+        id: landlords.id,
+        name: landlords.name,
+        email: landlords.email,
+      }).from(landlords).orderBy(landlords.name);
+    }),
+
+  // Listar imóveis para filtro
+  getPropertiesList: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem ver imóveis');
+      }
+      
+      const db = await getDb();
+      if (!db) return [];
+      
+      return db.select({
+        id: properties.id,
+        title: properties.title,
+        address: properties.address,
+        neighborhood: properties.neighborhood,
+      }).from(properties).orderBy(properties.title);
+    }),
+
+  // Listar categorias para filtro
+  getCategoriesList: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem ver categorias');
+      }
+      
+      const db = await getDb();
+      if (!db) return [];
+      
+      const allTransactions = await db.select({ category: transactions.category }).from(transactions);
+      const categories = [...new Set(allTransactions.map(t => t.category).filter(Boolean))];
+      return categories;
+    }),
 });
 
 // ============================================
@@ -2097,6 +2342,91 @@ const rentalRouter = router({
 });
 
 // ============================================
+// CLIENTS ROUTER (CRM 360º)
+// ============================================
+
+const clientsRouter = router({
+  // Listar todos os clientes unificados (leads + proprietários + locatários)
+  getAll: protectedProcedure
+    .input(z.object({
+      limit: z.number().optional().default(50),
+      offset: z.number().optional().default(0),
+      search: z.string().optional(),
+      type: z.string().optional(), // 'comprador', 'locatario', 'proprietario', 'all'
+      source: z.string().optional(), // 'site', 'whatsapp', 'instagram', etc
+    }))
+    .query(async ({ input }) => {
+      return await db.getUnifiedClients(input);
+    }),
+  
+  // Obter perfil completo de um cliente
+  getProfile: protectedProcedure
+    .input(z.object({
+      entityType: z.enum(['lead', 'landlord', 'tenant']),
+      id: z.number(),
+    }))
+    .query(async ({ input }) => {
+      return await db.getClientProfile(input.entityType, input.id);
+    }),
+  
+  // Obter dados financeiros do cliente
+  getFinancials: protectedProcedure
+    .input(z.object({
+      entityType: z.enum(['lead', 'landlord', 'tenant']),
+      id: z.number(),
+    }))
+    .query(async ({ input }) => {
+      return await db.getClientFinancials(input.entityType, input.id);
+    }),
+  
+  // Obter imóveis relacionados ao cliente
+  getProperties: protectedProcedure
+    .input(z.object({
+      entityType: z.enum(['lead', 'landlord', 'tenant']),
+      id: z.number(),
+    }))
+    .query(async ({ input }) => {
+      return await db.getClientProperties(input.entityType, input.id);
+    }),
+  
+  // Obter histórico de interações
+  getInteractions: protectedProcedure
+    .input(z.object({
+      entityType: z.enum(['lead', 'landlord', 'tenant']),
+      id: z.number(),
+    }))
+    .query(async ({ input }) => {
+      return await db.getClientInteractions(input.entityType, input.id);
+    }),
+  
+  // Obter resumo de estatísticas
+  getStats: protectedProcedure.query(async () => {
+    const dbInstance = await getDb();
+    if (!dbInstance) return { totalLeads: 0, totalLandlords: 0, totalTenants: 0, newThisMonth: 0 };
+    
+    const leadsCount = await dbInstance.select({ count: sql<number>`count(*)` }).from(leads);
+    const landlordsCount = await dbInstance.select({ count: sql<number>`count(*)` }).from(landlords);
+    const tenantsCount = await dbInstance.select({ count: sql<number>`count(*)` }).from(tenants);
+    
+    // Leads novos este mês
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const newLeads = await dbInstance.select({ count: sql<number>`count(*)` })
+      .from(leads)
+      .where(gte(leads.createdAt, startOfMonth));
+    
+    return {
+      totalLeads: Number(leadsCount[0]?.count || 0),
+      totalLandlords: Number(landlordsCount[0]?.count || 0),
+      totalTenants: Number(tenantsCount[0]?.count || 0),
+      newThisMonth: Number(newLeads[0]?.count || 0),
+    };
+  }),
+});
+
+// ============================================
 // APP ROUTER
 // ============================================
 
@@ -2116,6 +2446,7 @@ export const appRouter = router({
   reviews: reviewsRouter,
   financing: financingRouter,
   rental: rentalRouter,
+  clients: clientsRouter,
 });
 
 export type AppRouter = typeof appRouter;

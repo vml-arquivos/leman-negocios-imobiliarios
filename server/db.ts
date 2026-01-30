@@ -1,4 +1,4 @@
-import { eq, desc, and, or, like, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, or, like, gte, lte, sql, inArray } from "drizzle-orm";
 import { ENV } from "./_core/env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -23,6 +23,13 @@ import {
   transactions,
   commissions,
   reviews,
+  // Tabelas de aluguel
+  landlords,
+  tenants,
+  rentalContracts,
+  rentalPayments,
+  propertyExpenses,
+  landlordTransfers,
   type Property,
   type PropertyImage,
   type Lead,
@@ -44,7 +51,13 @@ import {
   type InsertCampaignSource,
   type InsertTransaction,
   type InsertCommission,
-  type InsertReview
+  type InsertReview,
+  type Landlord,
+  type Tenant,
+  type RentalContract,
+  type RentalPayment,
+  type PropertyExpense,
+  type LandlordTransfer
 } from "../drizzle/schema";
 
 let _client: postgres.Sql | null = null;
@@ -411,8 +424,260 @@ export async function listBlogPosts(params: { limit?: number; offset?: number; c
 }
 
 // ============================================
-// SETTINGS / BUFFER / AI CONTEXT / WEBHOOK LOGS / OWNERS / ANALYTICS / CAMPAIGNS / FINANCE / REVIEWS
+// SITE SETTINGS FUNCTIONS
 // ============================================
-// OBS: O restante do arquivo permanece igual ao original do repositório.
-// As funções acima foram adaptadas para PostgreSQL (usando .returning() em vez de .insertId).
-// Para as demais funções, basta aplicar o mesmo padrão de migração.
+
+export async function getSiteSettings(): Promise<SiteSetting | null> {
+  const dbInstance = await getDb();
+  if (!dbInstance) return null;
+  const result = await dbInstance.select().from(siteSettings).limit(1);
+  return result[0] || null;
+}
+
+export async function updateSiteSettings(data: Partial<SiteSetting>): Promise<SiteSetting> {
+  const dbInstance = await getDb();
+  if (!dbInstance) throw new Error("Database not available");
+  
+  // Verificar se já existe configuração
+  const existing = await dbInstance.select().from(siteSettings).limit(1);
+  
+  if (existing.length > 0) {
+    const result = await dbInstance.update(siteSettings).set({
+      ...data,
+      updatedAt: new Date()
+    }).where(eq(siteSettings.id, existing[0].id)).returning();
+    return result[0];
+  } else {
+    // Criar configuração inicial
+    const result = await dbInstance.insert(siteSettings).values({
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as any).returning();
+    return result[0];
+  }
+}
+
+// ============================================
+// CLIENTS UNIFIED FUNCTIONS (CRM 360º)
+// ============================================
+
+export async function getUnifiedClients(params: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  type?: string;
+  source?: string;
+}) {
+  const dbInstance = await getDb();
+  if (!dbInstance) return { items: [], total: 0 };
+  
+  const limit = params.limit ?? 50;
+  const offset = params.offset ?? 0;
+  
+  // Buscar leads (compradores/locatários)
+  const leadsData = await dbInstance.select({
+    id: leads.id,
+    name: leads.name,
+    email: leads.email,
+    phone: leads.phone,
+    whatsapp: leads.whatsapp,
+    clientType: leads.clientType,
+    source: leads.source,
+    stage: leads.stage,
+    qualification: leads.qualification,
+    score: leads.score,
+    lastContactedAt: leads.lastContactedAt,
+    createdAt: leads.createdAt,
+    updatedAt: leads.updatedAt,
+  }).from(leads).limit(limit).offset(offset);
+  
+  // Buscar proprietários (landlords)
+  const landlordsData = await dbInstance.select({
+    id: landlords.id,
+    name: landlords.name,
+    email: landlords.email,
+    phone: landlords.phone,
+    whatsapp: landlords.whatsapp,
+    cpfCnpj: landlords.cpfCnpj,
+    status: landlords.status,
+    createdAt: landlords.createdAt,
+    updatedAt: landlords.updatedAt,
+  }).from(landlords).limit(limit).offset(offset);
+  
+  // Normalizar dados
+  const normalizedLeads = leadsData.map(l => ({
+    id: l.id,
+    entityType: 'lead' as const,
+    name: l.name,
+    email: l.email,
+    phone: l.phone || l.whatsapp,
+    clientType: l.clientType === 'comprador' ? 'Comprador' : l.clientType === 'locatario' ? 'Locatário' : 'Lead',
+    source: l.source || 'site',
+    status: l.stage || 'novo',
+    qualification: l.qualification,
+    score: l.score,
+    lastInteraction: l.lastContactedAt,
+    createdAt: l.createdAt,
+  }));
+  
+  const normalizedLandlords = landlordsData.map(l => ({
+    id: l.id,
+    entityType: 'landlord' as const,
+    name: l.name,
+    email: l.email,
+    phone: l.phone || l.whatsapp,
+    clientType: 'Proprietário',
+    source: 'cadastro',
+    status: l.status || 'ativo',
+    qualification: null,
+    score: null,
+    lastInteraction: l.updatedAt,
+    createdAt: l.createdAt,
+  }));
+  
+  // Combinar e ordenar por data de criação
+  const allClients = [...normalizedLeads, ...normalizedLandlords]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  
+  // Aplicar filtros
+  let filtered = allClients;
+  
+  if (params.search) {
+    const searchLower = params.search.toLowerCase();
+    filtered = filtered.filter(c => 
+      c.name.toLowerCase().includes(searchLower) ||
+      (c.email && c.email.toLowerCase().includes(searchLower)) ||
+      (c.phone && c.phone.includes(params.search!))
+    );
+  }
+  
+  if (params.type && params.type !== 'all') {
+    filtered = filtered.filter(c => c.clientType.toLowerCase() === params.type!.toLowerCase());
+  }
+  
+  if (params.source && params.source !== 'all') {
+    filtered = filtered.filter(c => c.source === params.source);
+  }
+  
+  return {
+    items: filtered,
+    total: filtered.length,
+  };
+}
+
+export async function getClientProfile(entityType: 'lead' | 'landlord' | 'tenant', id: number) {
+  const dbInstance = await getDb();
+  if (!dbInstance) return null;
+  
+  if (entityType === 'lead') {
+    const result = await dbInstance.select().from(leads).where(eq(leads.id, id)).limit(1);
+    return result[0] || null;
+  } else if (entityType === 'landlord') {
+    const result = await dbInstance.select().from(landlords).where(eq(landlords.id, id)).limit(1);
+    return result[0] || null;
+  } else if (entityType === 'tenant') {
+    const result = await dbInstance.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+    return result[0] || null;
+  }
+  
+  return null;
+}
+
+export async function getClientFinancials(entityType: 'lead' | 'landlord' | 'tenant', id: number) {
+  const dbInstance = await getDb();
+  if (!dbInstance) return { payments: [], expenses: [], transfers: [], summary: {} };
+  
+  if (entityType === 'landlord') {
+    // Buscar pagamentos de aluguel relacionados
+    const payments = await dbInstance.select().from(rentalPayments).where(eq(rentalPayments.landlordId, id));
+    
+    // Buscar despesas
+    const expenses = await dbInstance.select().from(propertyExpenses).where(eq(propertyExpenses.landlordId, id));
+    
+    // Buscar repasses
+    const transfers = await dbInstance.select().from(landlordTransfers).where(eq(landlordTransfers.landlordId, id));
+    
+    // Calcular resumo
+    const totalReceived = payments.reduce((sum, p) => sum + (p.landlordAmount || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalTransferred = transfers.filter(t => t.status === 'concluido').reduce((sum, t) => sum + (t.netAmount || 0), 0);
+    
+    return {
+      payments,
+      expenses,
+      transfers,
+      summary: {
+        totalReceived,
+        totalExpenses,
+        totalTransferred,
+        pendingTransfer: totalReceived - totalExpenses - totalTransferred,
+      }
+    };
+  } else if (entityType === 'tenant') {
+    const payments = await dbInstance.select().from(rentalPayments).where(eq(rentalPayments.tenantId, id));
+    
+    const totalPaid = payments.filter(p => p.status === 'pago').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    const totalPending = payments.filter(p => p.status === 'pendente').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    const totalOverdue = payments.filter(p => p.status === 'atrasado').reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    
+    return {
+      payments,
+      expenses: [],
+      transfers: [],
+      summary: {
+        totalPaid,
+        totalPending,
+        totalOverdue,
+      }
+    };
+  }
+  
+  return { payments: [], expenses: [], transfers: [], summary: {} };
+}
+
+export async function getClientProperties(entityType: 'lead' | 'landlord' | 'tenant', id: number) {
+  const dbInstance = await getDb();
+  if (!dbInstance) return [];
+  
+  if (entityType === 'landlord') {
+    // Buscar contratos do proprietário e seus imóveis
+    const contractsData = await dbInstance.select().from(rentalContracts).where(eq(rentalContracts.landlordId, id));
+    const propertyIds = contractsData.map(c => c.propertyId);
+    
+    if (propertyIds.length === 0) return [];
+    
+    const propertiesData = await dbInstance.select().from(properties).where(inArray(properties.id, propertyIds));
+    return propertiesData;
+  } else if (entityType === 'tenant') {
+    const contractsData = await dbInstance.select().from(rentalContracts).where(eq(rentalContracts.tenantId, id));
+    const propertyIds = contractsData.map(c => c.propertyId);
+    
+    if (propertyIds.length === 0) return [];
+    
+    const propertiesData = await dbInstance.select().from(properties).where(inArray(properties.id, propertyIds));
+    return propertiesData;
+  } else if (entityType === 'lead') {
+    // Buscar imóvel de interesse do lead
+    const leadData = await dbInstance.select().from(leads).where(eq(leads.id, id)).limit(1);
+    if (leadData[0]?.interestedPropertyId) {
+      const propertiesData = await dbInstance.select().from(properties).where(eq(properties.id, leadData[0].interestedPropertyId));
+      return propertiesData;
+    }
+  }
+  
+  return [];
+}
+
+export async function getClientInteractions(entityType: 'lead' | 'landlord' | 'tenant', id: number) {
+  const dbInstance = await getDb();
+  if (!dbInstance) return [];
+  
+  if (entityType === 'lead') {
+    const interactionsData = await dbInstance.select().from(interactions).where(eq(interactions.leadId, id)).orderBy(desc(interactions.createdAt));
+    return interactionsData;
+  }
+  
+  // Para landlords e tenants, não há tabela de interações direta
+  return [];
+}
