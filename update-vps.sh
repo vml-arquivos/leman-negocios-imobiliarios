@@ -29,12 +29,12 @@ cd "$(dirname "$0")"
 
 # --- 2. PUXAR ATUALIZAÇÕES DO GITHUB ---
 echo_info "Puxando as últimas atualizações do repositório (branch master)..."
-git pull origin master
+git pull origin main
 
 # --- 3. RECONSTRUIR E REINICIAR OS CONTÊINERES ---
 echo_info "Reconstruindo a imagem da aplicação e reiniciando os serviços..."
 # O Docker Compose irá recriar apenas os contêineres que precisam ser atualizados
-docker-compose up --build -d
+docker compose up --build -d
 
 # --- 4. LIMPEZA DE IMAGENS ANTIGAS (OPCIONAL) ---
 echo_info "Limpando imagens Docker antigas e não utilizadas..."
@@ -43,7 +43,7 @@ docker image prune -f
 echo_info "=================================================================="
 echo_info "✅ ATUALIZAÇÃO CONCLUÍDA! ✅"
 echo_info "A aplicação foi atualizada com sucesso."
-echo_info "Use 'docker-compose ps' para verificar o status dos contêineres."
+echo_info "Use 'docker compose ps' para verificar o status dos contêineres."
 echo_info "=================================================================="
 
 # Fim do script

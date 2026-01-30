@@ -45,7 +45,7 @@ sudo usermod -aG docker ${USER}
 # IMPORTANTE: Faça logout e login novamente para que a alteração tenha efeito.
 
 # Instalar Docker Compose
-sudo apt install docker-compose -y
+sudo apt install docker compose -y
 ```
 
 ## 📦 ETAPA 2: Clonar e Configurar o Projeto
@@ -99,7 +99,7 @@ mkdir -p certbot/www certbot/conf
 Execute o comando abaixo para solicitar um certificado para `leman.casadf.com.br`. O Certbot irá iniciar um servidor web temporário na porta 80 para validar a propriedade do domínio.
 
 ```bash
-docker-compose run --rm --entrypoint "\n  certbot certonly --webroot -w /var/www/certbot \n    --email seu_email_para_notificacoes_do_certbot@exemplo.com \n    --agree-tos \n    --no-eff-email \n    -d leman.casadf.com.br \n    --force-renewal"
+docker compose run --rm --entrypoint "\n  certbot certonly --webroot -w /var/www/certbot \n    --email seu_email_para_notificacoes_do_certbot@exemplo.com \n    --agree-tos \n    --no-eff-email \n    -d leman.casadf.com.br \n    --force-renewal"
   certbot
 ```
 
@@ -113,10 +113,10 @@ Com tudo configurado, agora é a hora de construir e iniciar os contêineres da 
 
 ### 4.1. Construir e Iniciar os Contêineres
 
-Este comando irá ler o `docker-compose.yml`, construir a imagem da sua aplicação e iniciar todos os serviços (App, Nginx, Postgres, Redis) em segundo plano (`-d`).
+Este comando irá ler o `docker compose.yml`, construir a imagem da sua aplicação e iniciar todos os serviços (App, Nginx, Postgres, Redis) em segundo plano (`-d`).
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 O processo pode levar alguns minutos na primeira vez. Após a conclusão, sua aplicação estará no ar e acessível em **https://leman.casadf.com.br**.
@@ -126,7 +126,7 @@ O processo pode levar alguns minutos na primeira vez. Após a conclusão, sua ap
 Para garantir que todos os serviços estão rodando corretamente, use o comando:
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 Você deve ver todos os contêineres com o status `Up` ou `running`.
@@ -149,18 +149,18 @@ git pull origin master
 Use o mesmo comando de deploy. O Docker Compose é inteligente o suficiente para reconstruir apenas os serviços que foram alterados (neste caso, o `app`).
 
 ```bash
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 E pronto! Sua aplicação estará atualizada com a versão mais recente.
 
 ## 🛠️ Comandos Úteis de Gerenciamento
 
--   **Ver logs em tempo real:** `docker-compose logs -f app`
--   **Parar todos os serviços:** `docker-compose down`
--   **Reiniciar um serviço específico:** `docker-compose restart app`
--   **Acessar o shell do contêiner da aplicação:** `docker-compose exec app /bin/sh`
--   **Forçar a recriação de todos os contêineres:** `docker-compose up --build --force-recreate -d`
+-   **Ver logs em tempo real:** `docker compose logs -f app`
+-   **Parar todos os serviços:** `docker compose down`
+-   **Reiniciar um serviço específico:** `docker compose restart app`
+-   **Acessar o shell do contêiner da aplicação:** `docker compose exec app /bin/sh`
+-   **Forçar a recriação de todos os contêineres:** `docker compose up --build --force-recreate -d`
 
 ---
 

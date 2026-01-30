@@ -34,7 +34,7 @@ sudo apt-get update && sudo apt-get upgrade -y
 
 # --- 2. INSTALAÇÃO DE DEPENDÊNCIAS ---
 echo_info "Instalando Git, Docker e Docker Compose..."
-sudo apt-get install -y git docker.io docker-compose
+sudo apt-get install -y git docker.io
 
 # --- 3. CONFIGURAÇÃO DO DOCKER ---
 echo_info "Iniciando e habilitando o serviço do Docker..."
@@ -81,20 +81,20 @@ echo_info "Obtendo o certificado SSL... Isso pode levar um minuto."
 CERTBOT_EMAIL=$(grep CERTBOT_EMAIL .env.production | cut -d '=' -f2 | tr -d '"')
 CERTBOT_DOMAIN=$(grep CERTBOT_DOMAIN .env.production | cut -d '=' -f2 | tr -d '"')
 
-docker-compose run --rm --entrypoint "\n  certbot certonly --webroot -w /var/www/certbot \n    --email $CERTBOT_EMAIL \n    --agree-tos \n    --no-eff-email \n    -d $CERTBOT_DOMAIN \n    --force-renewal"
+docker compose run --rm --entrypoint "\n  certbot certonly --webroot -w /var/www/certbot \n    --email $CERTBOT_EMAIL \n    --agree-tos \n    --no-eff-email \n    -d $CERTBOT_DOMAIN \n    --force-renewal"
   certbot
 
 echo_info "Certificado SSL gerado com sucesso para $CERTBOT_DOMAIN!"
 
 # --- 7. DEPLOY FINAL ---
 echo_info "Construindo e iniciando os contêineres da aplicação..."
-docker-compose up --build -d
+docker compose up --build -d
 
 echo_info "=================================================================="
 echo_info "✅ SETUP CONCLUÍDO! ✅"
 _info "Sua aplicação deve estar acessível em https://$CERTBOT_DOMAIN"
-echo_info "Use 'docker-compose ps' para verificar o status dos contêineres."
-echo_info "Use 'docker-compose logs -f app' para ver os logs da aplicação."
+echo_info "Use 'docker compose ps' para verificar o status dos contêineres.
+echo_info "Use 'docker compose logs -f app' para ver os logs da aplicação.""
 echo_info "=================================================================="
 
 # Fim do script

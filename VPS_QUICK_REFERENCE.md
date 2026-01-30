@@ -23,14 +23,14 @@ nano .env.production
 mkdir -p certbot/www certbot/conf
 
 # 5. Gerar certificado SSL (Let's Encrypt)
-docker-compose run --rm --entrypoint "\n  certbot certonly --webroot -w /var/www/certbot \n    --email seu_email@exemplo.com \n    --agree-tos \n    --no-eff-email \n    -d leman.casadf.com.br \n    --force-renewal"
+docker compose run --rm --entrypoint "\n  certbot certonly --webroot -w /var/www/certbot \n    --email seu_email@exemplo.com \n    --agree-tos \n    --no-eff-email \n    -d leman.casadf.com.br \n    --force-renewal"
   certbot
 
 # 6. Fazer o deploy
-docker-compose up --build -d
+docker compose up --build -d
 
 # 7. Verificar status
-docker-compose ps
+docker compose ps
 ```
 
 ---
@@ -45,11 +45,11 @@ cd /home/ubuntu/leman-negocios-imobiliarios
 git pull origin master
 
 # Reconstruir e reiniciar
-docker-compose up --build -d
+docker compose up --build -d
 
 # Verificar se tudo está funcionando
-docker-compose ps
-docker-compose logs -f app
+docker compose ps
+docker compose logs -f app
 ```
 
 ---
@@ -58,15 +58,15 @@ docker-compose logs -f app
 
 | Comando | Descrição |
 |---------|-----------|
-| `docker-compose ps` | Listar status de todos os contêineres |
-| `docker-compose logs -f app` | Ver logs da aplicação em tempo real |
-| `docker-compose logs -f nginx` | Ver logs do Nginx |
-| `docker-compose logs -f postgres` | Ver logs do banco de dados |
-| `docker-compose restart app` | Reiniciar apenas a aplicação |
-| `docker-compose restart nginx` | Reiniciar apenas o Nginx |
-| `docker-compose down` | Parar todos os serviços |
-| `docker-compose up -d` | Iniciar todos os serviços |
-| `docker-compose exec app /bin/sh` | Acessar o shell do contêiner da app |
+| `docker compose ps` | Listar status de todos os contêineres |
+| `docker compose logs -f app` | Ver logs da aplicação em tempo real |
+| `docker compose logs -f nginx` | Ver logs do Nginx |
+| `docker compose logs -f postgres` | Ver logs do banco de dados |
+| `docker compose restart app` | Reiniciar apenas a aplicação |
+| `docker compose restart nginx` | Reiniciar apenas o Nginx |
+| `docker compose down` | Parar todos os serviços |
+| `docker compose up -d` | Iniciar todos os serviços |
+| `docker compose exec app /bin/sh` | Acessar o shell do contêiner da app |
 
 ---
 
@@ -75,7 +75,7 @@ docker-compose logs -f app
 O Certbot renova automaticamente os certificados 30 dias antes da expiração. Se precisar renovar manualmente:
 
 ```bash
-docker-compose run --rm certbot renew
+docker compose run --rm certbot renew
 ```
 
 ---
@@ -116,13 +116,13 @@ openssl s_client -connect leman.casadf.com.br:443
 
 ```bash
 # Ver logs detalhados
-docker-compose logs -f app
+docker compose logs -f app
 
 # Reiniciar todos os serviços
-docker-compose restart
+docker compose restart
 
 # Verificar se o banco de dados está saudável
-docker-compose exec postgres pg_isready -U leman_user
+docker compose exec postgres pg_isready -U leman_user
 ```
 
 ### Erro de certificado SSL
@@ -132,23 +132,23 @@ docker-compose exec postgres pg_isready -U leman_user
 ls -la certbot/conf/live/
 
 # Renovar certificado manualmente
-docker-compose run --rm certbot renew --force-renewal
+docker compose run --rm certbot renew --force-renewal
 
 # Reiniciar Nginx após renovação
-docker-compose restart nginx
+docker compose restart nginx
 ```
 
 ### Erro de conexão com o banco de dados
 
 ```bash
 # Verificar status do PostgreSQL
-docker-compose ps postgres
+docker compose ps postgres
 
 # Ver logs do PostgreSQL
-docker-compose logs postgres
+docker compose logs postgres
 
 # Reiniciar o banco de dados
-docker-compose restart postgres
+docker compose restart postgres
 ```
 
 ---
@@ -157,9 +157,9 @@ docker-compose restart postgres
 
 | Localização | Descrição |
 |-------------|-----------|
-| `docker-compose logs app` | Logs da aplicação Node.js |
-| `docker-compose logs nginx` | Logs do servidor web |
-| `docker-compose logs postgres` | Logs do banco de dados |
+| `docker compose logs app` | Logs da aplicação Node.js |
+| `docker compose logs nginx` | Logs do servidor web |
+| `docker compose logs postgres` | Logs do banco de dados |
 | `/var/log/docker/` | Logs do daemon do Docker (no host) |
 
 ---
@@ -169,19 +169,19 @@ docker-compose restart postgres
 ### Fazer backup do banco de dados
 
 ```bash
-docker-compose exec postgres pg_dump -U leman_user leman_db > backup_$(date +%Y%m%d_%H%M%S).sql
+docker compose exec postgres pg_dump -U leman_user leman_db > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### Restaurar backup
 
 ```bash
-docker-compose exec -T postgres psql -U leman_user leman_db < backup_20260130_120000.sql
+docker compose exec -T postgres psql -U leman_user leman_db < backup_20260130_120000.sql
 ```
 
 ### Alterar senha do banco de dados
 
 ```bash
-docker-compose exec postgres psql -U leman_user -d leman_db
+docker compose exec postgres psql -U leman_user -d leman_db
 # No prompt do PostgreSQL:
 # ALTER USER leman_user WITH PASSWORD 'nova_senha_segura';
 # \q
@@ -194,8 +194,8 @@ docker-compose exec postgres psql -U leman_user -d leman_db
 Se encontrar problemas, consulte:
 
 1.  **Documentação completa:** `VPS_DEPLOYMENT_GUIDE.md`
-2.  **Logs da aplicação:** `docker-compose logs -f app`
-3.  **Status dos serviços:** `docker-compose ps`
+2.  **Logs da aplicação:** `docker compose logs -f app`
+3.  **Status dos serviços:** `docker compose ps`
 
 ---
 
