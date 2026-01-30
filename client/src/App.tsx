@@ -36,7 +36,6 @@ import OwnerPortal from "./pages/OwnerPortal";
 import Login from "./pages/auth/Login";
 import LoginSimple from "./pages/auth/LoginSimple";
 import Settings from "./pages/admin/Settings";
-import Rentals from "./pages/admin/Rentals";
 
 function Router() {
   return (
@@ -160,13 +159,6 @@ function Router() {
         {() => (
           <AdminLayout>
             <FinancialDashboardDemo />
-          </AdminLayout>
-        )}
-      </Route>
-      <Route path="/admin/rentals">
-        {() => (
-          <AdminLayout>
-            <Rentals />
           </AdminLayout>
         )}
       </Route>
