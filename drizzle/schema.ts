@@ -1,4 +1,4 @@
-import { serial, text, timestamp, varchar, boolean, numeric, json, date, pgEnum, pgTable, integer } from "drizzle-orm/pg-core";
+'''import { serial, text, timestamp, varchar, boolean, numeric, json, date, pgEnum, pgTable, integer } from "drizzle-orm/pg-core";
 
 
 // ============================================
@@ -227,39 +227,36 @@ export const interactions = pgTable("interactions", {
   metadata: text("metadata"), // Ex: {duration: 300, outcome: "positivo"}
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Interaction = typeof interactions.$inferSelect;
 export type InsertInteraction = typeof interactions.$inferInsert;
 
 // ============================================
-// TABELA DE BLOG POSTS
+// TABELA DE POSTS DO BLOG
 // ============================================
 
 export const blogPosts = pgTable("blog_posts", {
   id: serial("id").primaryKey(),
   
   title: varchar("title", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).unique().notNull(),
-  excerpt: text("excerpt"),
-  content: text("content").notNull(),
-  
-  featuredImage: varchar("featuredImage", { length: 500 }),
-  
-  categoryId: integer("categoryId"),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  content: text("content"),
   authorId: integer("authorId"),
   
   // SEO
   metaTitle: varchar("metaTitle", { length: 255 }),
   metaDescription: text("metaDescription"),
   
+  // Imagem de capa
+  coverImage: varchar("coverImage", { length: 500 }),
+  
   // Status
   published: boolean("published").default(false),
   publishedAt: timestamp("publishedAt"),
   
-  // Estatísticas
-  views: integer("views").default(0),
-  
+  // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -268,237 +265,185 @@ export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = typeof blogPosts.$inferInsert;
 
 // ============================================
-// TABELA DE CATEGORIAS DE BLOG
-// ============================================
-
-export const blogCategories = pgTable("blog_categories", {
-  id: serial("id").primaryKey(),
-  
-  name: varchar("name", { length: 100 }).notNull(),
-  slug: varchar("slug", { length: 100 }).unique().notNull(),
-  description: text("description"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type BlogCategory = typeof blogCategories.$inferSelect;
-export type InsertBlogCategory = typeof blogCategories.$inferInsert;
-
-// ============================================
 // TABELA DE CONFIGURAÇÕES DO SITE
 // ============================================
 
 export const siteSettings = pgTable("site_settings", {
   id: serial("id").primaryKey(),
   
-  // Informações da empresa
-  companyName: varchar("companyName", { length: 255 }),
-  companyDescription: text("companyDescription"),
-  companyLogo: varchar("companyLogo", { length: 500 }),
+  // Identidade Visual
+  siteName: varchar("siteName", { length: 100 }).default("Leman"),
+  logoUrl: varchar("logoUrl", { length: 500 }),
+  faviconUrl: varchar("faviconUrl", { length: 500 }),
+  primaryColor: varchar("primaryColor", { length: 20 }).default("#c9a962"),
+  secondaryColor: varchar("secondaryColor", { length: 20 }).default("#1a1f3c"),
+  theme: themeStyleEnum("theme").default("modern"),
   
-  // Informações do corretor
-  realtorName: varchar("realtorName", { length: 255 }),
-  realtorPhoto: varchar("realtorPhoto", { length: 500 }),
-  realtorBio: text("realtorBio"),
-  realtorCreci: varchar("realtorCreci", { length: 50 }),
+  // Contato
+  contactEmail: varchar("contactEmail", { length: 100 }),
+  contactPhone: varchar("contactPhone", { length: 20 }),
+  contactWhatsapp: varchar("contactWhatsapp", { length: 20 }),
+  address: varchar("address", { length: 255 }),
   
-  // Contatos
-  phone: varchar("phone", { length: 20 }),
-  whatsapp: varchar("whatsapp", { length: 20 }),
-  email: varchar("email", { length: 320 }),
-  address: text("address"),
+  // Redes Sociais
+  socialInstagram: varchar("socialInstagram", { length: 255 }),
+  socialFacebook: varchar("socialFacebook", { length: 255 }),
+  socialLinkedin: varchar("socialLinkedin", { length: 255 }),
   
-  // Redes sociais
-  instagram: varchar("instagram", { length: 255 }),
-  facebook: varchar("facebook", { length: 255 }),
-  youtube: varchar("youtube", { length: 255 }),
-  tiktok: varchar("tiktok", { length: 255 }),
-  linkedin: varchar("linkedin", { length: 255 }),
+  // SEO Global
+  globalMetaTitle: varchar("globalMetaTitle", { length: 255 }),
+  globalMetaDescription: text("globalMetaDescription"),
   
-  // SEO
-  siteTitle: varchar("siteTitle", { length: 255 }),
-  siteDescription: text("siteDescription"),
-  siteKeywords: text("siteKeywords"),
-  
-  // Integrações
-  googleAnalyticsId: varchar("googleAnalyticsId", { length: 50 }),
-  facebookPixelId: varchar("facebookPixelId", { length: 50 }),
-  
-  // Customização Visual (Site Builder)
-  themeStyle: themeStyleEnum("theme_style").default("modern"),
-  primaryColor: varchar("primaryColor", { length: 7 }).default("#0f172a"), // Hex color
-  
-  // Seção Hero
-  heroTitle: varchar("heroTitle", { length: 255 }),
-  heroSubtitle: text("heroSubtitle"),
-  heroBackgroundImage: varchar("heroBackgroundImage", { length: 500 }),
-  
-  // Seção Sobre
-  aboutSectionTitle: varchar("aboutSectionTitle", { length: 255 }),
-  aboutSectionContent: text("aboutSectionContent"),
-  aboutSectionImage: varchar("aboutSectionImage", { length: 500 }),
-  
+  // Timestamps
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
-export type SiteSetting = typeof siteSettings.$inferSelect;
-export type InsertSiteSetting = typeof siteSettings.$inferInsert;
+export type SiteSettings = typeof siteSettings.$inferSelect;
+export type InsertSiteSettings = typeof siteSettings.$inferInsert;
 
 // ============================================
-// TABELAS DE INTEGRAÇÃO WHATSAPP / N8N
+// TABELA DE MENSAGENS (EX: WHATSAPP)
 // ============================================
 
-// Buffer de mensagens do WhatsApp
-export const messageBuffer = pgTable("message_buffer", {
-  id: serial("id").primaryKey(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  messageId: varchar("messageId", { length: 255 }).notNull().unique(),
-  content: text("content"),
-  type: messageTypeEnum("message_type").notNull(),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-  processed: integer("processed").default(0).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type MessageBuffer = typeof messageBuffer.$inferSelect;
-export type InsertMessageBuffer = typeof messageBuffer.$inferInsert;
-
-// Contexto e histórico de IA
-export const aiContextStatus = pgTable("ai_context_status", {
-  id: serial("id").primaryKey(),
-  sessionId: varchar("sessionId", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  message: text("message").notNull(), // JSON com {type: 'ai'|'user', content: string}
-  role: aiRoleEnum("ai_role").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type AiContextStatus = typeof aiContextStatus.$inferSelect;
-export type InsertAiContextStatus = typeof aiContextStatus.$inferInsert;
-
-// Interesses dos clientes (para N8N)
-export const clientInterests = pgTable("client_interests", {
-  id: serial("id").primaryKey(),
-  clientId: integer("clientId").notNull(), // Referência ao lead
-  propertyType: varchar("propertyType", { length: 100 }), // Tipo de imóvel de interesse
-  interestType: interestTypeEnum("interest_type"),
-  budgetMin: integer("budgetMin"), // Em centavos
-  budgetMax: integer("budgetMax"), // Em centavos
-  preferredNeighborhoods: text("preferredNeighborhoods"),
-  notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
-
-export type ClientInterest = typeof clientInterests.$inferSelect;
-export type InsertClientInterest = typeof clientInterests.$inferInsert;
-
-// Webhooks e logs de integração
-export const webhookLogs = pgTable("webhook_logs", {
-  id: serial("id").primaryKey(),
-  source: varchar("source", { length: 50 }).notNull(), // whatsapp, n8n, etc
-  event: varchar("event", { length: 100 }).notNull(),
-  payload: text("payload"), // JSON do payload recebido
-  response: text("response"), // JSON da resposta enviada
-  status: webhookStatusEnum("webhook_status").notNull(),
-  errorMessage: text("errorMessage"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type WebhookLog = typeof webhookLogs.$inferSelect;
-export type InsertWebhookLog = typeof webhookLogs.$inferInsert;
-
-// ============================================
-// TABELA DE PROPRIETÁRIOS
-// ============================================
-
-export const owners = pgTable("owners", {
+export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   
-  // Informações pessoais
-  name: varchar("name", { length: 255 }).notNull(),
-  cpfCnpj: varchar("cpfCnpj", { length: 20 }),
-  email: varchar("email", { length: 320 }),
-  phone: varchar("phone", { length: 20 }),
-  whatsapp: varchar("whatsapp", { length: 20 }),
+  leadId: integer("leadId").notNull(),
+  userId: integer("userId"), // Corretor que enviou/recebeu
   
-  // Endereço
-  address: text("address"),
-  city: varchar("city", { length: 100 }),
-  state: varchar("state", { length: 2 }),
-  zipCode: varchar("zipCode", { length: 10 }),
-  
-  // Informações bancárias (para pagamentos)
-  bankName: varchar("bankName", { length: 100 }),
-  bankAgency: varchar("bankAgency", { length: 20 }),
-  bankAccount: varchar("bankAccount", { length: 30 }),
-  pixKey: varchar("pixKey", { length: 255 }),
-  
-  // Notas e observações
-  notes: text("notes"),
-  
-  // Status
-  active: boolean("active").default(true),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
-
-export type Owner = typeof owners.$inferSelect;
-export type InsertOwner = typeof owners.$inferInsert;
-
-// ============================================
-// TABELAS DE ANALYTICS E MÉTRICAS
-// ============================================
-
-export const analyticsEvents = pgTable("analytics_events", {
-  id: serial("id").primaryKey(),
-  
-  // Tipo de evento
-  eventType: varchar("eventType", { length: 50 }).notNull(), // page_view, property_view, contact_form, whatsapp_click, phone_click
-  
-  // Dados do evento
-  propertyId: integer("propertyId"),
-  leadId: integer("leadId"),
-  userId: integer("userId"),
-  
-  // Origem do tráfego
-  source: varchar("source", { length: 100 }), // google_ads, facebook_ads, instagram, organic, direct
-  medium: varchar("medium", { length: 100 }), // cpc, social, organic, referral
-  campaign: varchar("campaign", { length: 255 }), // Nome da campanha
-  
-  // Dados técnicos
-  url: varchar("url", { length: 500 }),
-  referrer: varchar("referrer", { length: 500 }),
-  userAgent: text("userAgent"),
-  ipAddress: varchar("ipAddress", { length: 45 }),
+  content: text("content").notNull(),
+  type: messageTypeEnum("type").notNull(), // incoming, outgoing
   
   // Metadados
-  metadata: json("metadata"), // Dados adicionais em JSON
+  timestamp: timestamp("timestamp").notNull(),
+  read: boolean("read").default(false),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
-export type InsertAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;
 
-export const campaignSources = pgTable("campaign_sources", {
+// ============================================
+// TABELA DE CONVERSAS (AGRUPA MENSAGENS)
+// ============================================
+
+export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
   
-  // Identificação da campanha
-  name: varchar("name", { length: 255 }).notNull(),
-  source: varchar("source", { length: 100 }).notNull(), // google, facebook, instagram, etc
-  medium: varchar("medium", { length: 100 }), // cpc, social, etc
-  campaignId: varchar("campaignId", { length: 255 }), // ID externo da campanha
+  leadId: integer("leadId").notNull().unique(),
   
-  // Métricas
-  budget: numeric("budget", { precision: 10, scale: 2 }), // Orçamento investido
-  clicks: integer("clicks").default(0),
-  impressions: integer("impressions").default(0),
-  conversions: integer("conversions").default(0), // Leads gerados
+  lastMessageId: integer("lastMessageId"),
+  lastMessageTimestamp: timestamp("lastMessageTimestamp"),
   
   // Status
-  active: boolean("active").default(true),
+  unreadMessages: integer("unreadMessages").default(0),
+  archived: boolean("archived").default(false),
+  
+  // Atribuição
+  assignedTo: integer("assignedTo"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = typeof conversations.$inferInsert;
+
+// ============================================
+// TABELA DE CONVERSAS DE IA (CHATBOT)
+// ============================================
+
+export const aiConversations = pgTable('ai_conversations', {
+  id: serial('id').primaryKey(),
+  leadId: integer('leadId').notNull(),
+  summary: text('summary'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const aiMessages = pgTable('ai_messages', {
+  id: serial('id').primaryKey(),
+  conversationId: integer('conversation_id').notNull(),
+  role: aiRoleEnum('role').notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type AiConversation = typeof aiConversations.$inferSelect;
+export type InsertAiConversation = typeof aiConversations.$inferInsert;
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type InsertAiMessage = typeof aiMessages.$inferInsert;
+
+// ============================================
+// TABELA DE INTERESSES EM IMÓVEIS
+// ============================================
+
+export const propertyInterests = pgTable('property_interests', {
+  id: serial('id').primaryKey(),
+  leadId: integer('leadId').notNull(),
+  propertyId: integer('propertyId').notNull(),
+  interestType: interestTypeEnum('interest_type').notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type PropertyInterest = typeof propertyInterests.$inferSelect;
+export type InsertPropertyInterest = typeof propertyInterests.$inferInsert;
+
+// ============================================
+// TABELA DE WEBHOOKS
+// ============================================
+
+export const webhooks = pgTable('webhooks', {
+  id: serial('id').primaryKey(),
+  source: varchar('source', { length: 100 }).notNull(), // ex: 'rdstation', 'facebook_leads'
+  payload: json('payload').notNull(),
+  status: webhookStatusEnum('status').default('pending').notNull(),
+  processedAt: timestamp('processed_at'),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = typeof webhooks.$inferInsert;
+
+// ============================================
+// TABELA DE EVENTOS DE TRACKING
+// ============================================
+
+export const trackingEvents = pgTable('tracking_events', {
+  id: serial('id').primaryKey(),
+  eventType: eventTypeEnum('event_type').notNull(),
+  leadId: integer('leadId'),
+  propertyId: integer('propertyId'),
+  sessionId: varchar('sessionId', { length: 100 }),
+  metadata: json('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type TrackingEvent = typeof trackingEvents.$inferSelect;
+export type InsertTrackingEvent = typeof trackingEvents.$inferInsert;
+
+// ============================================
+// TABELA DE FONTES DE CAMPANHA
+// ============================================
+
+export const campaignSources = pgTable('campaign_sources', {
+  id: serial("id").primaryKey(),
+  
+  // Parâmetros UTM
+  utmSource: varchar("utmSource", { length: 100 }),
+  utmMedium: varchar("utmMedium", { length: 100 }),
+  utmCampaign: varchar("utmCampaign", { length: 100 }),
+  utmTerm: varchar("utmTerm", { length: 100 }),
+  utmContent: varchar("utmContent", { length: 100 }),
+  
+  // Métricas
+  visits: integer("visits").default(0),
+  leadsGenerated: integer("leadsGenerated").default(0),
+  
+  // Datas
   startDate: date("startDate"),
   endDate: date("endDate"),
   
@@ -515,6 +460,15 @@ export type InsertCampaignSource = typeof campaignSources.$inferInsert;
 // ============================================
 // TABELAS FINANCEIRAS
 // ============================================
+
+// NOVA TABELA ADICIONADA
+export const financialCategories = pgTable("financial_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(), // Ex: Aluguel, IPTU
+  type: varchar("type", { length: 20 }).notNull(), // 'income' | 'expense'
+  color: varchar("color", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
@@ -548,6 +502,11 @@ export const transactions = pgTable("transactions", {
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+
+  // --- NOVAS COLUNAS ADICIONADAS ---
+  categoryId: integer("categoryId").references(() => financialCategories.id, { onDelete: 'set null' }),
+  parentTransactionId: integer("parentTransactionId").references(() => transactions.id, { onDelete: 'set null' }),
+  recurrence: varchar("recurrence", { length: 100 }),
 });
 
 export type Transaction = typeof transactions.$inferSelect;
@@ -633,12 +592,18 @@ export const contracts = pgTable("contracts", {
   tenantId: integer("tenantId").notNull(),
   ownerId: integer("ownerId").notNull(),
   status: varchar("status", { length: 50 }).default("ACTIVE").notNull(),
-  rentAmount: integer("rentAmount").notNull(), // em centavos
+  rentAmount: integer("rentAmount"), // em centavos (reutilizado de valor_parcela)
   adminFeeRate: integer("adminFeeRate").default(10).notNull(), // percentual
   startDate: timestamp("startDate").defaultNow().notNull(),
   paymentDay: integer("paymentDay").default(5).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+
+  // --- NOVAS COLUNAS ADICIONADAS ---
+  adminFeePercent: numeric("adminFeePercent", { precision: 5, scale: 2 }),
+  rentDueDay: integer("rentDueDay"),
+  readjustmentIndex: varchar("readjustmentIndex", { length: 50 }),
+  isActiveRental: boolean("isActiveRental").default(false),
 });
 
 export type Contract = typeof contracts.$inferSelect;
@@ -773,17 +738,11 @@ export const tenants = pgTable("tenants", {
   phone: varchar("phone", { length: 20 }).notNull(),
   whatsapp: varchar("whatsapp", { length: 20 }),
   
-  // Dados Profissionais
-  occupation: varchar("occupation", { length: 100 }),
-  employer: varchar("employer", { length: 255 }),
-  monthlyIncome: integer("monthlyIncome"), // em centavos
-  
-  // Referências
-  emergencyContact: varchar("emergencyContact", { length: 255 }),
-  emergencyPhone: varchar("emergencyPhone", { length: 20 }),
+  // Endereço
+  address: varchar("address", { length: 255 }),
   
   // Status
-  status: ownerStatusEnum("owner_status").default("ativo").notNull(),
+  status: accountStatusEnum("account_status").default("ativo").notNull(),
   
   // Notas
   notes: text("notes"),
@@ -795,48 +754,39 @@ export const tenants = pgTable("tenants", {
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = typeof tenants.$inferInsert;
 
-// Tabela de Contratos de Locação (Expandida)
-export const rentalContracts = pgTable("rental_contracts", {
+// Tabela de Propriedades do Proprietário (associação)
+export const propertyOwners = pgTable("property_owners", {
   id: serial("id").primaryKey(),
-  
-  // Relacionamentos
   propertyId: integer("propertyId").notNull(),
   landlordId: integer("landlordId").notNull(),
+  ownershipPercentage: numeric("ownershipPercentage", { precision: 5, scale: 2 }).default("100.00"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PropertyOwner = typeof propertyOwners.$inferSelect;
+export type InsertPropertyOwner = typeof propertyOwners.$inferInsert;
+
+// Tabela de Contratos de Aluguel (associação)
+export const rentalAgreements = pgTable("rental_agreements", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull(),
   tenantId: integer("tenantId").notNull(),
+  landlordId: integer("landlordId").notNull(),
   
-  // Dados do Contrato
-  contractNumber: varchar("contractNumber", { length: 50 }).unique(),
+  // Detalhes do Contrato
   startDate: date("startDate").notNull(),
-  endDate: date("endDate").notNull(),
-  durationMonths: integer("durationMonths").notNull(),
-  
-  // Valores
-  rentAmount: integer("rentAmount").notNull(), // Aluguel em centavos
-  condoFee: integer("condoFee").default(0), // Condomínio em centavos
-  iptu: integer("iptu").default(0), // IPTU mensal em centavos
-  waterBill: integer("waterBill").default(0), // Água em centavos
-  gasBill: integer("gasBill").default(0), // Gás em centavos
+  endDate: date("endDate"),
+  rentAmount: integer("rentAmount").notNull(), // em centavos
+  condoFee: integer("condoFee"), // em centavos
+  iptu: integer("iptu"), // em centavos
   
   // Responsabilidades
   condoFeeResponsibility: feeResponsibilityEnum("condo_fee_responsibility").default("inquilino"),
   iptuResponsibility: feeResponsibilityEnum("iptu_responsibility").default("proprietario"),
   
-  // Comissão
-  commissionRate: numeric("commissionRate", { precision: 5, scale: 2 }).notNull(), // Taxa de administração
-  commissionAmount: integer("commissionAmount").notNull(), // Valor da comissão em centavos
-  
-  // Pagamento
-  paymentDay: integer("paymentDay").default(5).notNull(), // Dia do vencimento
-  
-  // Garantias
-  depositAmount: integer("depositAmount"), // Caução em centavos
-  guarantorName: varchar("guarantorName", { length: 255 }),
-  guarantorCpf: varchar("guarantorCpf", { length: 14 }),
-  guarantorPhone: varchar("guarantorPhone", { length: 20 }),
-  
   // Reajuste
   adjustmentIndex: adjustmentIndexEnum("adjustment_index").default("IGPM"),
-  lastAdjustmentDate: date("lastAdjustmentDate"),
+  adjustmentMonth: integer("adjustmentMonth"), // Mês de reajuste (1-12)
   
   // Status
   status: contractStatusEnum("contract_status").default("ativo").notNull(),
@@ -844,49 +794,24 @@ export const rentalContracts = pgTable("rental_contracts", {
   // Documentos
   contractUrl: varchar("contractUrl", { length: 500 }),
   
-  // Notas
-  notes: text("notes"),
-  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
-export type RentalContract = typeof rentalContracts.$inferSelect;
-export type InsertRentalContract = typeof rentalContracts.$inferInsert;
+export type RentalAgreement = typeof rentalAgreements.$inferSelect;
+export type InsertRentalAgreement = typeof rentalAgreements.$inferInsert;
 
 // Tabela de Pagamentos de Aluguel
-export const rentalPayments = pgTable("rental_payments", {
+export const rentPayments = pgTable("rent_payments", {
   id: serial("id").primaryKey(),
-  
-  // Relacionamentos
-  contractId: integer("contractId").notNull(),
-  propertyId: integer("propertyId").notNull(),
-  landlordId: integer("landlordId").notNull(),
-  tenantId: integer("tenantId").notNull(),
-  
-  // Referência
-  referenceMonth: varchar("referenceMonth", { length: 7 }).notNull(), // YYYY-MM
+  agreementId: integer("agreementId").notNull(),
   
   // Valores
-  rentAmount: integer("rentAmount").notNull(), // Aluguel em centavos
-  condoFee: integer("condoFee").default(0),
-  iptu: integer("iptu").default(0),
-  waterBill: integer("waterBill").default(0),
-  gasBill: integer("gasBill").default(0),
-  otherCharges: integer("otherCharges").default(0),
-  totalAmount: integer("totalAmount").notNull(), // Total a receber do inquilino
-  
-  // Multa e Juros (se houver atraso)
-  lateFee: integer("lateFee").default(0), // Multa em centavos
-  interest: integer("interest").default(0), // Juros em centavos
-  discount: integer("discount").default(0), // Desconto em centavos
-  
-  // Comissão
-  commissionRate: numeric("commissionRate", { precision: 5, scale: 2 }).notNull(),
-  commissionAmount: integer("commissionAmount").notNull(),
-  
-  // Repasse ao Proprietário
-  landlordAmount: integer("landlordAmount").notNull(), // Valor líquido para o proprietário
+  rentAmount: integer("rentAmount").notNull(),
+  condoFee: integer("condoFee"),
+  iptu: integer("iptu"),
+  otherFees: integer("otherFees"),
+  totalAmount: integer("totalAmount").notNull(),
   
   // Datas
   dueDate: date("dueDate").notNull(),
@@ -895,58 +820,36 @@ export const rentalPayments = pgTable("rental_payments", {
   // Status
   status: paymentStatusEnum("payment_status").default("pendente").notNull(),
   
-  // Pagamento
+  // Metadados
   paymentMethod: varchar("paymentMethod", { length: 50 }),
-  paymentProof: varchar("paymentProof", { length: 500 }),
-  
-  // Notas
-  notes: text("notes"),
+  receiptUrl: varchar("receiptUrl", { length: 500 }),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
-export type RentalPayment = typeof rentalPayments.$inferSelect;
-export type InsertRentalPayment = typeof rentalPayments.$inferInsert;
+export type RentPayment = typeof rentPayments.$inferSelect;
+export type InsertRentPayment = typeof rentPayments.$inferInsert;
 
-// Tabela de Despesas por Imóvel
+// Tabela de Despesas do Imóvel
 export const propertyExpenses = pgTable("property_expenses", {
   id: serial("id").primaryKey(),
-  
-  // Relacionamentos
   propertyId: integer("propertyId").notNull(),
-  landlordId: integer("landlordId").notNull(),
-  contractId: integer("contractId"), // Opcional, se for relacionado a um contrato específico
   
-  // Tipo de Despesa
+  // Detalhes da Despesa
+  description: varchar("description", { length: 255 }).notNull(),
   expenseType: expenseTypeEnum("expense_type").notNull(),
+  amount: integer("amount").notNull(), // em centavos
+  date: date("date").notNull(),
   
-  // Descrição
-  description: text("description").notNull(),
-  
-  // Valores
-  amount: integer("amount").notNull(), // Valor em centavos
-  
-  // Responsável pelo Pagamento
+  // Responsável pelo pagamento
   paidBy: paidByEnum("paid_by").notNull(),
-  
-  // Datas
-  expenseDate: date("expenseDate").notNull(),
-  paymentDate: date("paymentDate"),
   
   // Status
   status: expenseStatusEnum("expense_status").default("pendente").notNull(),
   
-  // Comprovantes
-  receiptUrl: varchar("receiptUrl", { length: 500 }),
-  invoiceNumber: varchar("invoiceNumber", { length: 100 }),
-  
-  // Fornecedor
-  supplierName: varchar("supplierName", { length: 255 }),
-  supplierCpfCnpj: varchar("supplierCpfCnpj", { length: 20 }),
-  
-  // Notas
-  notes: text("notes"),
+  // Documentos
+  invoiceUrl: varchar("invoiceUrl", { length: 500 }),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -955,68 +858,30 @@ export const propertyExpenses = pgTable("property_expenses", {
 export type PropertyExpense = typeof propertyExpenses.$inferSelect;
 export type InsertPropertyExpense = typeof propertyExpenses.$inferInsert;
 
-// Tabela de Repasses aos Proprietários
-export const landlordTransfers = pgTable("landlord_transfers", {
+// Tabela de Repasses ao Proprietário
+export const ownerTransfers = pgTable("owner_transfers", {
   id: serial("id").primaryKey(),
-  
-  // Relacionamentos
   landlordId: integer("landlordId").notNull(),
+  rentPaymentId: integer("rentPaymentId"), // Pagamento de aluguel que originou o repasse
   
-  // Referência
-  referenceMonth: varchar("referenceMonth", { length: 7 }).notNull(), // YYYY-MM
+  // Valores
+  grossAmount: integer("grossAmount").notNull(), // Valor bruto do aluguel
+  commissionAmount: integer("commissionAmount").notNull(), // Comissão da imobiliária
+  netAmount: integer("netAmount").notNull(), // Valor líquido a ser repassado
   
-  // Valores Consolidados
-  totalRentReceived: integer("totalRentReceived").notNull(), // Total de aluguéis recebidos
-  totalCommissions: integer("totalCommissions").notNull(), // Total de comissões
-  totalExpenses: integer("totalExpenses").notNull(), // Total de despesas
-  netAmount: integer("netAmount").notNull(), // Valor líquido a repassar
-  
-  // Detalhamento (JSON)
-  paymentsIncluded: text("paymentsIncluded"), // JSON array de IDs de rentalPayments
-  expensesIncluded: text("expensesIncluded"), // JSON array de IDs de propertyExpenses
-  
-  // Transferência
+  // Datas
   transferDate: date("transferDate"),
-  transferMethod: varchar("transferMethod", { length: 50 }), // pix, ted, doc
-  transferProof: varchar("transferProof", { length: 500 }),
+  expectedDate: date("expectedDate"),
   
   // Status
   status: transactionStatusEnum("transaction_status").default("pendente").notNull(),
   
-  // Notas
-  notes: text("notes"),
+  // Metadados
+  receiptUrl: varchar("receiptUrl", { length: 500 }),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
-export type LandlordTransfer = typeof landlordTransfers.$inferSelect;
-export type InsertLandlordTransfer = typeof landlordTransfers.$inferInsert;
-
-// Tabela de Histórico de Reajustes
-export const rentAdjustments = pgTable("rent_adjustments", {
-  id: serial("id").primaryKey(),
-  
-  // Relacionamentos
-  contractId: integer("contractId").notNull(),
-  
-  // Valores
-  previousAmount: integer("previousAmount").notNull(), // Valor anterior em centavos
-  newAmount: integer("newAmount").notNull(), // Novo valor em centavos
-  adjustmentPercentage: numeric("adjustmentPercentage", { precision: 5, scale: 2 }).notNull(),
-  
-  // Índice Utilizado
-  adjustmentIndex: varchar("adjustmentIndex", { length: 50 }).notNull(), // IGPM, IPCA, etc
-  indexValue: numeric("indexValue", { precision: 8, scale: 4 }).notNull(), // Valor do índice
-  
-  // Datas
-  effectiveDate: date("effectiveDate").notNull(),
-  
-  // Notas
-  notes: text("notes"),
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type RentAdjustment = typeof rentAdjustments.$inferSelect;
-export type InsertRentAdjustment = typeof rentAdjustments.$inferInsert;
+export type OwnerTransfer = typeof ownerTransfers.$inferSelect;
+export type InsertOwnerTransfer = typeof ownerTransfers.$inferInsert;'''
