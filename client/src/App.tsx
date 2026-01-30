@@ -104,9 +104,7 @@ function Router() {
       <Route path="/admin/leads/new">
         {() => <LeadEdit />}
       </Route>
-      <Route path="/imovel/:id">
-        {(params) => <PropertyDetailPage />}
-      </Route>      <Route path="/admin/clientes-gestao">
+      <Route path="/admin/clientes-gestao">
         {() => (
           <AdminLayout>
             <ClientsManagement />
