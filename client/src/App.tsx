@@ -25,6 +25,7 @@ import PropertyNew from "./pages/admin/PropertyNew";
 import LeadsAdmin from "./pages/admin/Leads";
 import LeadEdit from "./pages/admin/LeadEdit";
 import ClientManagement from "./pages/admin/ClientManagement";
+import ClientsManagement from "./pages/admin/ClientsManagement";
 import FollowUp from "./pages/admin/FollowUp";
 import Analytics from "./pages/admin/Analytics";
 import TestImageUpload from "./pages/TestImageUpload";
@@ -105,8 +106,14 @@ function Router() {
       </Route>
       <Route path="/imovel/:id">
         {(params) => <PropertyDetailPage />}
+      </Route>      <Route path="/admin/clientes-gestao">
+        {() => (
+          <AdminLayout>
+            <ClientsManagement />
+          </AdminLayout>
+        )}
       </Route>
-      <Route path="/admin/clients">
+      <Route path="/admin/clientes">
         {() => (
           <AdminLayout>
             <ClientManagement />

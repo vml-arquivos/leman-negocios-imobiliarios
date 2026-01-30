@@ -1035,3 +1035,43 @@ export const financialCategories = pgTable("financial_categories", {
 
 export type FinancialCategory = typeof financialCategories.$inferSelect;
 export type InsertFinancialCategory = typeof financialCategories.$inferInsert;
+
+
+// ============================================
+// GESTÃO DE CLIENTES UNIFICADA
+// ============================================
+
+export const clientTypeEnumV2 = pgEnum("client_type_v2", ["proprietario_locacao", "proprietario_venda", "locatario", "comprador"]);
+
+export const clients = pgTable("clients", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).unique(),
+  phone: varchar("phone", { length: 20 }),
+  cpfCnpj: varchar("cpf_cnpj", { length: 20 }).unique(),
+  clientType: clientTypeEnumV2("client_type").notNull(),
+  source: varchar("source", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const clientProperties = pgTable("client_properties", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  propertyId: integer("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  relationshipType: varchar("relationship_type", { length: 50 }).notNull(), // proprietario, locatario, comprador_potencial
+});
+
+export const bankAccounts = pgTable("bank_accounts", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  bankName: varchar("bank_name", { length: 100 }),
+  agencyNumber: varchar("agency_number", { length: 20 }),
+  accountNumber: varchar("account_number", { length: 20 }),
+  accountType: varchar("account_type", { length: 50 }),
+  pixKey: varchar("pix_key", { length: 255 }),
+  pixKeyType: varchar("pix_key_type", { length: 50 }),
+  isPrimary: boolean("is_primary").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
