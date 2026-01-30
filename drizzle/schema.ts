@@ -1020,3 +1020,18 @@ export const rentAdjustments = pgTable("rent_adjustments", {
 
 export type RentAdjustment = typeof rentAdjustments.$inferSelect;
 export type InsertRentAdjustment = typeof rentAdjustments.$inferInsert;
+
+
+// ============================================
+// CATEGORIAS FINANCEIRAS
+// ============================================
+export const financialCategories = pgTable("financial_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  type: varchar("type", { length: 20 }).notNull(), // 'income' | 'expense'
+  color: varchar("color", { length: 20 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FinancialCategory = typeof financialCategories.$inferSelect;
+export type InsertFinancialCategory = typeof financialCategories.$inferInsert;
