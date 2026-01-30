@@ -29,7 +29,7 @@ export async function createContext(
         
         if (payload) {
           // Buscar usuário no banco
-          user = await db.getUserByEmail(payload.email);
+          user = await db.db.getUserByEmail(payload.email);
         }
       }
     }
