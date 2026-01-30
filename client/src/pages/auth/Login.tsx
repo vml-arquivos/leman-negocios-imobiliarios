@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -12,45 +13,34 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Usar mutation do tRPC em vez de fetch REST
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: (data) => {
+      // Armazenar token e usuário no localStorage (para compatibilidade)
+      if (data.token) {
+        localStorage.setItem("leman_token", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("leman_user", JSON.stringify(data.user));
+      }
+
+      toast.success(`Bem-vindo, ${data.user.name}!`);
+
+      // Usar navegação SPA em vez de hard reload
+      setLocation("/admin");
+    },
+    onError: (error) => {
+      console.error("Login error:", error);
+      toast.error(error.message || "Erro ao fazer login");
+      setIsLoading(false);
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Importante para enviar/receber cookies
-        body: JSON.stringify({ email, password }),
-      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Erro ao fazer login");
-      }
-
-      // Armazenar token e usuário no localStorage (para compatibilidade)
-      if (data.data?.token) {
-        localStorage.setItem("leman_token", data.data.token);
-      }
-      if (data.data?.user) {
-        localStorage.setItem("leman_user", JSON.stringify(data.data.user));
-      }
-      
-      toast.success(`Bem-vindo, ${data.data.user.name}!`);
-      
-      // Navegar para o dashboard
-      setTimeout(() => {
-        setLocation("/admin");
-      }, 100);
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error(error instanceof Error ? error.message : "Erro ao fazer login");
-      setIsLoading(false);
-    }
+    loginMutation.mutate({ email, password });
   };
 
   return (
@@ -91,8 +81,8 @@ export default function Login() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-amber-600 hover:bg-amber-700"
               disabled={isLoading}
             >

@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function LoginSimple() {
+  const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,8 +18,8 @@ export default function LoginSimple() {
     const result = await login(email, password);
 
     if (result.success) {
-      // Redirecionar para o dashboard
-      window.location.href = "/admin";
+      // Usar navegação SPA em vez de hard reload
+      setLocation("/admin");
     } else {
       setError(result.error || "Erro ao fazer login");
       setLoading(false);

@@ -24,6 +24,27 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, logout, loading } = useAuth({ redirectOnUnauthenticated: true });
+  const [location] = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigation = [
+    { name: "Área do Corretor", href: "/admin", icon: LayoutDashboard },
+    { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    { name: "Imóveis", href: "/admin/properties", icon: Building2 },
+    { name: "Leads", href: "/admin/leads", icon: Users },
+    { name: "Gestão de Clientes", href: "/admin/clients", icon: Bot },
+    { name: "Follow-up Automático", href: "/admin/followup", icon: Bell, badge: true },
+    { name: "Financeiro", href: "/admin/financial", icon: DollarSign },
+    { name: "Blog", href: "/admin/blog", icon: FileText },
+    { name: "Personalizar Site", href: "/admin/customization", icon: Paintbrush },
+    { name: "Configurações", href: "/admin/settings", icon: Settings },
+  ];
+
+  // Logout agora usa navegação SPA (já implementado no useAuth)
+  const handleLogout = async () => {
+    await logout();
+    // O redirecionamento já é feito dentro do useAuth.logout() via setLocation
+  };
 
   // Mostrar loading enquanto verifica autenticação
   if (loading) {
@@ -41,28 +62,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (!user) {
     return null;
   }
-
-  const { user: authenticatedUser, logout: performLogout } = { user, logout };
-  const [location] = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const navigation = [
-    { name: "Área do Corretor", href: "/admin", icon: LayoutDashboard },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-    { name: "Imóveis", href: "/admin/properties", icon: Building2 },
-    { name: "Leads", href: "/admin/leads", icon: Users },
-    { name: "Gestão de Clientes", href: "/admin/clients", icon: Bot },
-    { name: "Follow-up Automático", href: "/admin/followup", icon: Bell, badge: true },
-    { name: "Financeiro", href: "/admin/financial", icon: DollarSign },
-    { name: "Blog", href: "/admin/blog", icon: FileText },
-    { name: "Personalizar Site", href: "/admin/customization", icon: Paintbrush },
-    { name: "Configurações", href: "/admin/settings", icon: Settings },
-  ];
-
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = "/";
-  };
 
   return (
     <div className="min-h-screen bg-muted/30">

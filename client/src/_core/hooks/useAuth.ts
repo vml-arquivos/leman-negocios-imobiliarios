@@ -1,121 +1,106 @@
-import { useState, useEffect, useCallback } from "react";
-
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: "admin" | "user";
-  avatarUrl?: string;
-};
+import { useCallback } from "react";
+import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
   redirectPath?: string;
 };
 
-const API_BASE_URL = "";  // Vazio = mesma origem
-
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = "/auth/login" } = options ?? {};
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
-  // Carregar usuário do cookie (via endpoint /api/auth/me)
-  useEffect(() => {
-    const loadUser = async () => {
+  // ============================================
+  // QUERY: Validar sessão via tRPC (auth.me)
+  // ============================================
+  const {
+    data: user,
+    isLoading: loading,
+    error,
+    refetch,
+  } = trpc.auth.me.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // ============================================
+  // MUTATION: Login via tRPC
+  // ============================================
+  const loginMutation = trpc.auth.login.useMutation();
+
+  const login = useCallback(
+    async (email: string, password: string) => {
       try {
-        // O cookie é enviado automaticamente pelo navegador
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-          credentials: "include", // Importante: envia cookies
-          headers: {
-            "Content-Type": "application/json"
-          }
-        });
+        const result = await loginMutation.mutateAsync({ email, password });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data?.user) {
-            setUser(data.data.user);
-          } else {
-            setUser(null);
+        if (result.success) {
+          // Armazenar token no localStorage para compatibilidade
+          if (result.token) {
+            localStorage.setItem("leman_token", result.token);
           }
-        } else {
-          setUser(null);
+          if (result.user) {
+            localStorage.setItem("leman_user", JSON.stringify(result.user));
+          }
+
+          // Invalidar cache e refetch do usuário
+          await refetch();
+
+          return { success: true, user: result.user };
         }
+
+        return { success: false, error: "Erro desconhecido" };
       } catch (err) {
-        console.error("[Auth] Erro ao carregar usuário:", err);
-        setUser(null);
+        console.error("[Auth] Erro no login:", err);
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Erro ao fazer login",
+        };
       }
+    },
+    [loginMutation, refetch]
+  );
 
-      setLoading(false);
-    };
-
-    loadUser();
-  }, []);
-
-  // Redirecionar se não autenticado
-  useEffect(() => {
-    if (!redirectOnUnauthenticated) return;
-    if (loading) return;
-    if (user) return;
-    if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
-
-    window.location.href = redirectPath;
-  }, [redirectOnUnauthenticated, redirectPath, loading, user]);
-
-  // Login é feito diretamente no componente Login.tsx via fetch
-  // Não precisa de função login aqui
+  // ============================================
+  // MUTATION: Logout via tRPC
+  // ============================================
+  const logoutMutation = trpc.auth.logout.useMutation();
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
+      await logoutMutation.mutateAsync();
     } catch (err) {
       console.error("[Auth] Erro no logout:", err);
     } finally {
-      setUser(null);
+      // Limpar localStorage
       localStorage.removeItem("leman_token");
       localStorage.removeItem("leman_user");
-      window.location.href = "/auth/login";
-    }
-  }, []);
 
+      // Navegar para login usando SPA navigation (sem hard reload)
+      setLocation("/auth/login");
+    }
+  }, [logoutMutation, setLocation]);
+
+  // ============================================
+  // REFRESH: Revalidar sessão
+  // ============================================
   const refresh = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
+    await refetch();
+  }, [refetch]);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data?.user) {
-          setUser(data.data.user);
-        } else {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    } catch (err) {
-      console.error("[Auth] Erro ao atualizar usuário:", err);
+  // Redirecionar se não autenticado (após loading)
+  if (redirectOnUnauthenticated && !loading && !user) {
+    if (typeof window !== "undefined" && window.location.pathname !== redirectPath) {
+      setTimeout(() => setLocation(redirectPath), 0);
     }
-  }, []);
+  }
 
   return {
-    user,
+    user: user ?? null,
     loading,
-    error,
+    error: error?.message ?? null,
     isAuthenticated: Boolean(user),
+    login,
     logout,
     refresh,
   };
