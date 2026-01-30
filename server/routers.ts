@@ -33,7 +33,7 @@ const authRouter = router({
       }
       
       // Buscar usuário por email
-      const user = await db.getUserByEmail(input.email);
+      const user = await db.db.getUserByEmail(input.email);
       if (!user) {
         console.log("[Auth] Usuário não encontrado:", input.email);
         throw new Error("Email ou senha incorretos");
@@ -69,7 +69,7 @@ const authRouter = router({
       });
       
       // Atualizar lastSignedIn
-      await db.updateUserLastSignIn(user.id);
+      await db.db.updateUserLastSignIn(user.id);
       
       console.log("[Auth] Login bem-sucedido:", input.email);
       
@@ -107,7 +107,7 @@ const authRouter = router({
       }
       
       // Verificar se email já existe
-      const existingUser = await db.getUserByEmail(input.email);
+      const existingUser = await db.db.getUserByEmail(input.email);
       if (existingUser) {
         throw new Error("Email já cadastrado");
       }
@@ -116,7 +116,7 @@ const authRouter = router({
       const hashedPassword = await hashPassword(input.password);
       
       // Criar usuário
-      const user = await db.createUser({
+      const user = await db.db.createUser({
         name: input.name,
         email: input.email,
         password: hashedPassword,
