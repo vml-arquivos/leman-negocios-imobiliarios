@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
     environment:
       # Database
-      DATABASE_URL: postgresql://leman_user:${DB_PASSWORD:-leman_secure_password_2026}@postgres:5432/leman_imoveis
+      DATABASE_URL: ${DATABASE_URL}
       
       # Redis
       REDIS_URL: redis://:${REDIS_PASSWORD:-leman_redis_2026}@redis:6379
@@ -104,8 +104,6 @@ services:
     networks:
       - leman-network
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
