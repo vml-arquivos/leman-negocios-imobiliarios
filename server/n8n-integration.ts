@@ -2,33 +2,58 @@
  * N8N INTEGRATION HELPER
  * 
  * Funções auxiliares para integração com N8N e gerenciamento de chat history
+ * Usa as tabelas nativas do Supabase: n8n_conversas, n8n_mensagens, n8n_fila_mensagens
  */
 
 import { getDb } from "./db";
-import { messageBuffer, aiContextStatus, leads, owners } from "../drizzle/schema";
+import { 
+  n8nConversas, 
+  n8nMensagens, 
+  n8nFilaMensagens, 
+  n8nAutomacoesLog,
+  n8nLigacoes,
+  leads, 
+  owners 
+} from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 
 // ============================================
 // TIPOS
 // ============================================
 
-export interface ChatMessage {
+export interface N8nConversa {
   id: number;
-  phone: string;
-  messageId: string;
-  content: string;
-  type: 'incoming' | 'outgoing';
-  timestamp: Date;
-  processed: number;
+  telefone: string;
+  leadId: number | null;
+  nome: string | null;
+  email: string | null;
+  status: string;
+  origem: string;
+  tags: string[] | null;
+  metadata: any;
+  createdAt: Date;
+  updatedAt: Date;
+  ultimaInteracao: Date;
 }
 
-export interface AIContext {
+export interface N8nMensagem {
   id: number;
-  sessionId: string;
-  phone: string;
-  message: string;
-  role: 'user' | 'assistant' | 'system';
-  createdAt: Date;
+  conversaId: number | null;
+  telefone: string;
+  mensagem: string;
+  tipo: string;
+  direcao: string;
+  metadata: any;
+  timestamp: Date;
+}
+
+export interface N8nFilaMensagem {
+  id: number;
+  telefone: string;
+  idMensagem: string;
+  mensagem: string;
+  processada: boolean;
+  timestamp: Date;
 }
 
 // ============================================
@@ -36,141 +61,197 @@ export interface AIContext {
 // ============================================
 
 /**
+ * Buscar ou criar conversa por telefone
+ * Usado pelo webhook para garantir que existe uma conversa
+ */
+export async function getOrCreateConversa(data: {
+  telefone: string;
+  nome?: string;
+  email?: string;
+  leadId?: number;
+}): Promise<N8nConversa> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Buscar conversa existente
+  const existing = await db
+    .select()
+    .from(n8nConversas)
+    .where(eq(n8nConversas.telefone, data.telefone))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Atualizar última interação
+    const [updated] = await db
+      .update(n8nConversas)
+      .set({ 
+        ultimaInteracao: new Date(),
+        ...(data.nome && { nome: data.nome }),
+        ...(data.email && { email: data.email }),
+        ...(data.leadId && { leadId: data.leadId }),
+      })
+      .where(eq(n8nConversas.id, existing[0].id))
+      .returning();
+    
+    return updated as N8nConversa;
+  }
+
+  // Criar nova conversa
+  const [conversa] = await db
+    .insert(n8nConversas)
+    .values({
+      telefone: data.telefone,
+      nome: data.nome || null,
+      email: data.email || null,
+      leadId: data.leadId || null,
+      status: "ativo",
+      origem: "whatsapp",
+    })
+    .returning();
+
+  return conversa as N8nConversa;
+}
+
+/**
  * Buscar histórico de mensagens por telefone
  * Usado pelo N8N para contexto de conversas
  */
-export async function getChatHistory(phone: string, limit: number = 50): Promise<ChatMessage[]> {
+export async function getChatHistory(telefone: string, limit: number = 50): Promise<N8nMensagem[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
-  const normalizedPhone = phone.replace(/\D/g, "");
 
   const messages = await db
     .select()
-    .from(messageBuffer)
-    .where(eq(messageBuffer.phone, phone))
-    .orderBy(desc(messageBuffer.timestamp))
+    .from(n8nMensagens)
+    .where(eq(n8nMensagens.telefone, telefone))
+    .orderBy(desc(n8nMensagens.timestamp))
     .limit(limit);
 
-  return messages as ChatMessage[];
+  return messages as N8nMensagem[];
 }
 
 /**
- * Buscar contexto de IA por sessionId
- * Usado pelo N8N para manter contexto de conversas com IA
+ * Buscar histórico de mensagens por conversa ID
  */
-export async function getAIContext(sessionId: string, limit: number = 20): Promise<AIContext[]> {
+export async function getChatHistoryByConversaId(conversaId: number, limit: number = 50): Promise<N8nMensagem[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const context = await db
+  const messages = await db
     .select()
-    .from(aiContextStatus)
-    .where(eq(aiContextStatus.sessionId, sessionId))
-    .orderBy(desc(aiContextStatus.createdAt))
+    .from(n8nMensagens)
+    .where(eq(n8nMensagens.conversaId, conversaId))
+    .orderBy(desc(n8nMensagens.timestamp))
     .limit(limit);
 
-  return context as AIContext[];
+  return messages as N8nMensagem[];
 }
 
 /**
- * Salvar mensagem no buffer
- * Usado pelo webhook para registrar mensagens recebidas
+ * Salvar mensagem no histórico
+ * Usado pelo webhook para registrar mensagens recebidas/enviadas
  */
-export async function saveMessageToBuffer(data: {
-  phone: string;
-  messageId: string;
-  content: string;
-  type: 'incoming' | 'outgoing';
-}): Promise<ChatMessage> {
+export async function saveMensagem(data: {
+  conversaId?: number;
+  telefone: string;
+  mensagem: string;
+  tipo?: 'texto' | 'imagem' | 'audio' | 'video' | 'documento';
+  direcao?: 'recebida' | 'enviada';
+  metadata?: any;
+}): Promise<N8nMensagem> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const [message] = await db
-    .insert(messageBuffer)
+    .insert(n8nMensagens)
     .values({
-      phone: data.phone,
-      messageId: data.messageId,
-      content: data.content,
-      type: data.type,
-      processed: 0,
+      conversaId: data.conversaId || null,
+      telefone: data.telefone,
+      mensagem: data.mensagem,
+      tipo: data.tipo || 'texto',
+      direcao: data.direcao || 'recebida',
+      metadata: data.metadata || {},
     })
     .returning();
 
-  return message as ChatMessage;
+  return message as N8nMensagem;
 }
 
 /**
- * Salvar contexto de IA
- * Usado pelo N8N para manter histórico de conversas com IA
+ * Adicionar mensagem à fila de processamento
+ * Usado pelo webhook para processar mensagens assincronamente
  */
-export async function saveAIContext(data: {
-  sessionId: string;
-  phone: string;
-  message: string;
-  role: 'user' | 'assistant' | 'system';
-}): Promise<AIContext> {
+export async function addToFilaMensagens(data: {
+  telefone: string;
+  idMensagem: string;
+  mensagem: string;
+}): Promise<N8nFilaMensagem> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const [context] = await db
-    .insert(aiContextStatus)
-    .values(data)
+  const [message] = await db
+    .insert(n8nFilaMensagens)
+    .values({
+      telefone: data.telefone,
+      idMensagem: data.idMensagem,
+      mensagem: data.mensagem,
+      processada: false,
+    })
     .returning();
 
-  return context as AIContext;
+  return message as N8nFilaMensagem;
 }
 
 /**
  * Marcar mensagem como processada
  * Usado pelo N8N após processar uma mensagem
  */
-export async function markMessageAsProcessed(messageId: string): Promise<void> {
+export async function markMensagemAsProcessed(idMensagem: string): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   await db
-    .update(messageBuffer)
-    .set({ processed: 1 })
-    .where(eq(messageBuffer.messageId, messageId));
+    .update(n8nFilaMensagens)
+    .set({ processada: true })
+    .where(eq(n8nFilaMensagens.idMensagem, idMensagem));
 }
 
 /**
  * Buscar mensagens não processadas
  * Usado pelo N8N para pegar mensagens pendentes
  */
-export async function getUnprocessedMessages(limit: number = 100): Promise<ChatMessage[]> {
+export async function getUnprocessedMessages(limit: number = 100): Promise<N8nFilaMensagem[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const messages = await db
     .select()
-    .from(messageBuffer)
-    .where(eq(messageBuffer.processed, 0))
-    .orderBy(messageBuffer.timestamp)
+    .from(n8nFilaMensagens)
+    .where(eq(n8nFilaMensagens.processada, false))
+    .orderBy(n8nFilaMensagens.timestamp)
     .limit(limit);
 
-  return messages as ChatMessage[];
+  return messages as N8nFilaMensagem[];
 }
 
 /**
  * Buscar Lead ou Owner por telefone
  * Usado pelo N8N para identificar o cliente
  */
-export async function findClientByPhone(phone: string): Promise<{
+export async function findClientByPhone(telefone: string): Promise<{
   type: 'lead' | 'owner' | null;
   client: any;
 } | null> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const normalizedPhone = phone.replace(/\D/g, "");
+  const normalizedPhone = telefone.replace(/\D/g, "");
 
   // Buscar em leads
   const leadResults = await db
     .select()
     .from(leads)
-    .where(eq(leads.phone, phone))
+    .where(eq(leads.phone, telefone))
     .limit(1);
 
   if (leadResults.length > 0) {
@@ -184,7 +265,7 @@ export async function findClientByPhone(phone: string): Promise<{
   const ownerResults = await db
     .select()
     .from(owners)
-    .where(eq(owners.phone, phone))
+    .where(eq(owners.phone, telefone))
     .limit(1);
 
   if (ownerResults.length > 0) {
@@ -195,6 +276,68 @@ export async function findClientByPhone(phone: string): Promise<{
   }
 
   return null;
+}
+
+/**
+ * Registrar log de automação N8N
+ */
+export async function logAutomacao(data: {
+  workflowId: string;
+  workflowName?: string;
+  executionId?: string;
+  leadId?: number;
+  acao: string;
+  resultado: string;
+  erro?: string;
+  metadata?: any;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(n8nAutomacoesLog).values({
+    workflowId: data.workflowId,
+    workflowName: data.workflowName || null,
+    executionId: data.executionId || null,
+    leadId: data.leadId || null,
+    acao: data.acao,
+    resultado: data.resultado,
+    erro: data.erro || null,
+    metadata: data.metadata || {},
+  });
+}
+
+/**
+ * Registrar ligação N8N
+ */
+export async function logLigacao(data: {
+  leadId?: number;
+  telefone: string;
+  retellCallId?: string;
+  duracao?: number;
+  transcricao?: string;
+  resumo?: string;
+  sentimento?: string;
+  proximaAcao?: string;
+  gravacaoUrl?: string;
+  status?: string;
+  metadata?: any;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(n8nLigacoes).values({
+    leadId: data.leadId || null,
+    telefone: data.telefone,
+    retellCallId: data.retellCallId || null,
+    duracao: data.duracao || null,
+    transcricao: data.transcricao || null,
+    resumo: data.resumo || null,
+    sentimento: data.sentimento || null,
+    proximaAcao: data.proximaAcao || null,
+    gravacaoUrl: data.gravacaoUrl || null,
+    status: data.status || 'concluida',
+    metadata: data.metadata || {},
+  });
 }
 
 /**
@@ -248,7 +391,7 @@ export async function notifyN8NNewLead(lead: any): Promise<boolean> {
 /**
  * Notificar N8N sobre nova mensagem
  */
-export async function notifyN8NNewMessage(message: ChatMessage): Promise<boolean> {
+export async function notifyN8NNewMessage(message: N8nMensagem): Promise<boolean> {
   const webhookUrl = process.env.N8N_WHATSAPP_WEBHOOK_URL;
   if (!webhookUrl) {
     console.warn('[N8N] N8N_WHATSAPP_WEBHOOK_URL não configurada');
@@ -259,10 +402,10 @@ export async function notifyN8NNewMessage(message: ChatMessage): Promise<boolean
     event: 'new_message',
     message: {
       id: message.id,
-      phone: message.phone,
-      messageId: message.messageId,
-      content: message.content,
-      type: message.type,
+      telefone: message.telefone,
+      mensagem: message.mensagem,
+      tipo: message.tipo,
+      direcao: message.direcao,
       timestamp: message.timestamp,
     },
   });

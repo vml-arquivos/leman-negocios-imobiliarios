@@ -198,16 +198,6 @@ export const leads = pgTable("leads", {
   score: integer("score").default(0), // 0-100
   priority: priorityEnum("priority").default("media"),
   
-  // N8N Integration - WhatsApp Conversations
-  n8nConversas: jsonb("n8n_conversas").$type<Array<{
-    phone: string;
-    message: string;
-    direction: 'in' | 'out';
-    timestamp: string;
-    messageId?: string;
-  }>>().default([]),
-  lastMessageAt: timestamp("last_message_at"),
-  
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -449,16 +439,6 @@ export const owners = pgTable("owners", {
   
   // Status
   active: boolean("active").default(true),
-  
-  // N8N Integration - WhatsApp Conversations
-  n8nConversas: jsonb("n8n_conversas").$type<Array<{
-    phone: string;
-    message: string;
-    direction: 'in' | 'out';
-    timestamp: string;
-    messageId?: string;
-  }>>().default([]),
-  lastMessageAt: timestamp("last_message_at"),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -1098,3 +1078,147 @@ export const bankAccounts = pgTable("bank_accounts", {
 
 
 // Duplicate removed - financingSimulations already defined above
+
+
+// ============================================
+// TABELAS N8N (INTEGRAÇÃO WHATSAPP)
+// ============================================
+
+// Tabela principal de conversas N8N
+export const n8nConversas = pgTable("n8n_conversas", {
+  id: serial("id").primaryKey(),
+  telefone: varchar("telefone", { length: 20 }).notNull().unique(),
+  leadId: integer("lead_id").references(() => leads.id),
+  nome: varchar("nome", { length: 255 }),
+  email: varchar("email", { length: 320 }),
+  status: varchar("status", { length: 50 }).default("ativo"),
+  origem: varchar("origem", { length: 50 }).default("whatsapp"),
+  tags: text("tags").array(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  ultimaInteracao: timestamp("ultima_interacao").defaultNow().notNull(),
+});
+
+export type N8nConversa = typeof n8nConversas.$inferSelect;
+export type InsertN8nConversa = typeof n8nConversas.$inferInsert;
+
+// Mensagens do chat N8N
+export const n8nMensagens = pgTable("n8n_mensagens", {
+  id: serial("id").primaryKey(),
+  conversaId: integer("conversa_id").references(() => n8nConversas.id),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
+  mensagem: text("mensagem").notNull(),
+  tipo: varchar("tipo", { length: 50 }).default("texto"),
+  direcao: varchar("direcao", { length: 20 }).default("recebida"),
+  metadata: jsonb("metadata").default({}),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type N8nMensagem = typeof n8nMensagens.$inferSelect;
+export type InsertN8nMensagem = typeof n8nMensagens.$inferInsert;
+
+// Fila de mensagens N8N (para processamento assíncrono)
+export const n8nFilaMensagens = pgTable("n8n_fila_mensagens", {
+  id: serial("id").primaryKey(),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
+  idMensagem: varchar("id_mensagem", { length: 255 }).notNull().unique(),
+  mensagem: text("mensagem").notNull(),
+  processada: boolean("processada").default(false),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type N8nFilaMensagem = typeof n8nFilaMensagens.$inferSelect;
+export type InsertN8nFilaMensagem = typeof n8nFilaMensagens.$inferInsert;
+
+// Log de automações N8N
+export const n8nAutomacoesLog = pgTable("n8n_automacoes_log", {
+  id: serial("id").primaryKey(),
+  workflowId: varchar("workflow_id", { length: 255 }).notNull(),
+  workflowName: varchar("workflow_name", { length: 255 }),
+  executionId: varchar("execution_id", { length: 255 }),
+  leadId: integer("lead_id").references(() => leads.id),
+  acao: varchar("acao", { length: 255 }).notNull(),
+  resultado: varchar("resultado", { length: 255 }).notNull(),
+  erro: text("erro"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type N8nAutomacaoLog = typeof n8nAutomacoesLog.$inferSelect;
+export type InsertN8nAutomacaoLog = typeof n8nAutomacoesLog.$inferInsert;
+
+// Ligações/Chamadas N8N (integração com Retell AI)
+export const n8nLigacoes = pgTable("n8n_ligacoes", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
+  retellCallId: varchar("retell_call_id", { length: 255 }).unique(),
+  duracao: integer("duracao"),
+  transcricao: text("transcricao"),
+  resumo: text("resumo"),
+  sentimento: varchar("sentimento", { length: 50 }),
+  proximaAcao: text("proxima_acao"),
+  gravacaoUrl: text("gravacao_url"),
+  status: varchar("status", { length: 50 }).default("concluida"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type N8nLigacao = typeof n8nLigacoes.$inferSelect;
+export type InsertN8nLigacao = typeof n8nLigacoes.$inferInsert;
+
+// ============================================
+// TABELAS ADICIONAIS DO SUPABASE
+// ============================================
+
+// Agendamentos de visitas
+export const appointments = pgTable("appointments", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id),
+  propertyId: integer("property_id").references(() => properties.id),
+  userId: integer("user_id").references(() => users.id),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
+  nome: varchar("nome", { length: 255 }),
+  email: varchar("email", { length: 320 }),
+  dataVisita: timestamp("data_visita").notNull(),
+  duracao: integer("duracao").default(60),
+  imovelEndereco: text("imovel_endereco"),
+  status: varchar("status", { length: 50 }).notNull().default("agendado"),
+  googleCalendarId: varchar("google_calendar_id", { length: 255 }),
+  googleMeetLink: text("google_meet_link"),
+  lembreteEnviado: boolean("lembrete_enviado").default(false),
+  lembreteEnviadoEm: timestamp("lembrete_enviado_em"),
+  observacoes: text("observacoes"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Appointment = typeof appointments.$inferSelect;
+export type InsertAppointment = typeof appointments.$inferInsert;
+
+// Propostas comerciais
+export const proposals = pgTable("proposals", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").notNull().references(() => leads.id),
+  propertyId: integer("property_id").notNull().references(() => properties.id),
+  userId: integer("user_id").references(() => users.id),
+  tipo: varchar("tipo", { length: 50 }).notNull(),
+  valorProposta: integer("valor_proposta").notNull(),
+  valorEntrada: integer("valor_entrada"),
+  valorFinanciamento: integer("valor_financiamento"),
+  prazoMeses: integer("prazo_meses"),
+  observacoes: text("observacoes"),
+  status: varchar("status", { length: 50 }).notNull().default("rascunho"),
+  dataEnvio: timestamp("data_envio"),
+  dataResposta: timestamp("data_resposta"),
+  dataValidade: timestamp("data_validade"),
+  documentoUrl: text("documento_url"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Proposal = typeof proposals.$inferSelect;
+export type InsertProposal = typeof proposals.$inferInsert;
