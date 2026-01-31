@@ -5,10 +5,10 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { webhooksRouter } from "./routers/webhooks";
 import { z } from "zod";
 import * as db from "./db";
-import * as rentalMgmt from "./rental-management";
+// import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
-import { analyticsEvents, campaignSources, transactions, commissions, reviews, financingSimulations, leads, landlords, tenants, rentalPayments, propertyExpenses, landlordTransfers, rentalContracts, properties } from "../drizzle/schema";
+import { analyticsEvents, campaignSources, reviews, financingSimulations, leads, rentalPayments, properties, interactions } from "../drizzle/schema";
 
 // ============================================
 // AUTH ROUTER
