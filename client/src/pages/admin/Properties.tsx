@@ -57,6 +57,7 @@ export default function PropertiesAdmin() {
       vendido: "bg-red-100 text-red-700",
       alugado: "bg-blue-100 text-blue-700",
       inativo: "bg-gray-100 text-gray-700",
+      geladeira: "bg-purple-100 text-purple-700",
     };
     return variants[status] || "bg-gray-100 text-gray-700";
   };
@@ -66,7 +67,7 @@ export default function PropertiesAdmin() {
       <div className="container py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-serif font-bold mb-2">Imóveis</h1>
+            <h1 className="text-4xl font-bold mb-2">Imóveis</h1>
             <p className="text-muted-foreground">
               Gerencie todos os imóveis cadastrados
             </p>

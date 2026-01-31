@@ -30,7 +30,7 @@ function FeaturedProperties() {
     <section className="py-20 bg-background">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-serif font-bold mb-4" style={{fontFamily: 'montserrat'}}>Imóveis em Destaque</h2>
+          <h2 className="text-4xl font-bold mb-4" style={{fontFamily: 'montserrat'}}>Imóveis em Destaque</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Seleção exclusiva de propriedades de alto padrão
           </p>
@@ -57,7 +57,7 @@ function FeaturedProperties() {
                   })()}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-4 left-4 text-white">
-                    <span className="text-2xl font-serif font-bold">
+                    <span className="text-2xl font-bold">
                       {property.salePrice
                         ? formatCurrency(property.salePrice)
                         : property.rentPrice
@@ -67,7 +67,7 @@ function FeaturedProperties() {
                   </div>
                 </div>
                 <CardContent className="p-6">
-                  <h3 className="text-xl font-serif font-bold mb-2">{property.title}</h3>
+                  <h3 className="text-xl font-bold mb-2">{property.title}</h3>
                   <p className="text-muted-foreground text-sm mb-4 flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
                     {property.neighborhood}, {property.city}
@@ -136,7 +136,7 @@ function AllProperties() {
     <section className="py-20 bg-muted/30">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-serif font-bold mb-4" style={{fontFamily: 'montserrat'}}>Todos os Imóveis Disponíveis</h2>
+          <h2 className="text-4xl font-bold mb-4" style={{fontFamily: 'montserrat'}}>Todos os Imóveis Disponíveis</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Confira nosso portfólio completo de imóveis de alto padrão
           </p>
@@ -162,7 +162,7 @@ function AllProperties() {
                 })()}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
-                  <span className="text-2xl font-serif font-bold">
+                  <span className="text-2xl font-bold">
                     {property.salePrice
                       ? formatCurrency(property.salePrice)
                       : property.rentPrice
@@ -172,7 +172,7 @@ function AllProperties() {
                 </div>
               </div>
               <CardContent className="p-6">
-                <h3 className="text-xl font-serif font-bold mb-2">{property.title}</h3>
+                <h3 className="text-xl font-bold mb-2">{property.title}</h3>
                 <p className="text-muted-foreground text-sm mb-4 flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
                   {property.neighborhood}, {property.city}
@@ -237,7 +237,7 @@ function ReviewsSection() {
     <section className="py-20 bg-muted/30">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-serif font-bold mb-4" style={{fontFamily: 'montserrat'}}>O Que Dizem Nossos Clientes</h2>
+          <h2 className="text-4xl font-bold mb-4" style={{fontFamily: 'montserrat'}}>O Que Dizem Nossos Clientes</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Depoimentos reais de clientes satisfeitos com nosso atendimento
           </p>
@@ -312,7 +312,7 @@ function BlogSection() {
     <section className="py-20 bg-background">
       <div className="container">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-serif font-bold mb-4" style={{fontFamily: 'montserrat'}}>Blog Imobiliário</h2>
+          <h2 className="text-4xl font-bold mb-4" style={{fontFamily: 'montserrat'}}>Blog Imobiliário</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Dicas, tendências e novidades do mercado de luxo
           </p>
@@ -495,21 +495,21 @@ export default function Home() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                 <TrendingUp className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-4xl font-serif font-bold mb-2" style={{fontFamily: 'poppins'}}>15+</h3>
+              <h3 className="text-4xl font-bold mb-2" style={{fontFamily: 'poppins'}}>15+</h3>
               <p className="text-muted-foreground">Anos de Experiência</p>
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                 <Award className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-4xl font-serif font-bold mb-2" style={{fontFamily: 'poppins'}}>500+</h3>
+              <h3 className="text-4xl font-bold mb-2" style={{fontFamily: 'poppins'}}>500+</h3>
               <p className="text-muted-foreground">Imóveis Vendidos</p>
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-4xl font-serif font-bold mb-2" style={{fontFamily: 'poppins'}}>1000+</h3>
+              <h3 className="text-4xl font-bold mb-2" style={{fontFamily: 'poppins'}}>1000+</h3>
               <p className="text-muted-foreground">Clientes Satisfeitos</p>
             </div>
           </div>
@@ -535,7 +535,7 @@ export default function Home() {
         <div className={settings?.themeStyle === 'classic' ? 'container max-w-6xl mx-auto' : 'container'}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl font-serif font-bold mb-6">
+              <h2 className="text-4xl font-bold mb-6">
                 {settings?.aboutSectionTitle || 'Leman Negócios Imobiliários'}
               </h2>
               <div className="text-lg text-muted-foreground mb-6 whitespace-pre-line">

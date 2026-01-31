@@ -4,6 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,13 +48,32 @@ import {
   Bot,
   TrendingUp,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Plus,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export default function ClientManagement() {
   const [, setLocation] = useLocation();
   const { data: leads, refetch } = trpc.leads.list.useQuery();
+  const createLead = trpc.leads.create.useMutation();
+  const updateLead = trpc.leads.update.useMutation();
+  const deleteLead = trpc.leads.delete.useMutation();
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    clientType: "comprador",
+    qualification: "nao_qualificado",
+    stage: "novo",
+  });
 
   // Segmentação de clientes
   const newClients = leads?.filter(lead => {
@@ -40,6 +86,64 @@ export default function ClientManagement() {
   const warmClients = leads?.filter(lead => lead.qualification === 'morno') || [];
   const coldClients = leads?.filter(lead => lead.qualification === 'frio') || [];
 
+  const handleOpenDialog = (lead?: any) => {
+    if (lead) {
+      setSelectedLead(lead);
+      setFormData({
+        name: lead.name || "",
+        email: lead.email || "",
+        phone: lead.phone || "",
+        clientType: lead.clientType || "comprador",
+        qualification: lead.qualification || "nao_qualificado",
+        stage: lead.stage || "novo",
+      });
+    } else {
+      setSelectedLead(null);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        clientType: "comprador",
+        qualification: "nao_qualificado",
+        stage: "novo",
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveClient = async () => {
+    try {
+      if (selectedLead) {
+        await updateLead.mutateAsync({
+          id: selectedLead.id,
+          ...formData,
+        });
+        toast.success("Cliente atualizado com sucesso!");
+      } else {
+        await createLead.mutateAsync(formData);
+        toast.success("Cliente criado com sucesso!");
+      }
+      setIsDialogOpen(false);
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao salvar cliente");
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!selectedLead) return;
+    
+    try {
+      await deleteLead.mutateAsync({ id: selectedLead.id });
+      toast.success("Cliente excluído com sucesso!");
+      setIsDeleteDialogOpen(false);
+      setSelectedLead(null);
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao excluir cliente");
+    }
+  };
+
   const handleSendProperties = async (leadId: number) => {
     try {
       const lead = leads?.find(l => l.id === leadId);
@@ -48,7 +152,6 @@ export default function ClientManagement() {
         return;
       }
 
-      // Buscar imóveis compatíveis
       const response = await fetch(`/api/trpc/leads.matchProperties?input=${encodeURIComponent(JSON.stringify({ leadId }))}`);
       const data = await response.json();
       const properties = data.result?.data || [];
@@ -58,7 +161,6 @@ export default function ClientManagement() {
         return;
       }
 
-      // Aqui será implementada a lógica de envio via webhook N8N
       toast.success(`${properties.length} imóveis compatíveis encontrados para ${lead.name}! Envio via WhatsApp será implementado com N8N.`);
     } catch (error) {
       toast.error("Erro ao buscar imóveis compatíveis");
@@ -67,7 +169,6 @@ export default function ClientManagement() {
 
   const handleScheduleMessage = (leadId: number) => {
     toast.info("Agendamento de mensagem será implementado com N8N");
-    // Aqui será implementada a lógica de agendamento via N8N
   };
 
   const getQualificationBadge = (qualification: string) => {
@@ -97,7 +198,7 @@ export default function ClientManagement() {
             <TableHead>Tipo</TableHead>
             <TableHead>Qualificação</TableHead>
             <TableHead>Estágio</TableHead>
-            {showActions && <TableHead className="text-right">Ações IA</TableHead>}
+            <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -121,33 +222,55 @@ export default function ClientManagement() {
                 <TableCell className="capitalize">{lead.clientType}</TableCell>
                 <TableCell>{getQualificationBadge(lead.qualification)}</TableCell>
                 <TableCell className="capitalize text-sm">{lead.stage?.replace('_', ' ')}</TableCell>
-                {showActions && (
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSendProperties(lead.id)}
-                        title="Enviar imóveis compatíveis"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleScheduleMessage(lead.id)}
-                        title="Programar mensagem"
-                      >
-                        <Clock className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                )}
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    {showActions && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSendProperties(lead.id)}
+                          title="Enviar imóveis compatíveis"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleScheduleMessage(lead.id)}
+                          title="Programar mensagem"
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenDialog(lead)}
+                      title="Editar cliente"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedLead(lead);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      title="Excluir cliente"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                 Nenhum cliente nesta categoria
               </TableCell>
             </TableRow>
@@ -160,11 +283,17 @@ export default function ClientManagement() {
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-serif font-bold mb-2">Gestão Inteligente de Clientes</h1>
-          <p className="text-muted-foreground">
-            Segmentação automática e envio de imóveis pela IA
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Gestão Inteligente de Clientes</h1>
+            <p className="text-muted-foreground">
+              Segmentação automática e envio de imóveis pela IA
+            </p>
+          </div>
+          <Button onClick={() => handleOpenDialog()} size="lg">
+            <Plus className="h-5 w-5 mr-2" />
+            Novo Cliente
+          </Button>
         </div>
 
         {/* Cards de Resumo */}
@@ -323,6 +452,130 @@ export default function ClientManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog de Criar/Editar Cliente */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{selectedLead ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+            <DialogDescription>
+              {selectedLead ? "Atualize as informações do cliente" : "Preencha os dados do novo cliente"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nome completo"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="clientType">Tipo de Cliente</Label>
+              <Select
+                value={formData.clientType}
+                onValueChange={(value) => setFormData({ ...formData, clientType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="comprador">Comprador</SelectItem>
+                  <SelectItem value="vendedor">Vendedor</SelectItem>
+                  <SelectItem value="locador">Locador</SelectItem>
+                  <SelectItem value="locatario">Locatário</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="qualification">Qualificação</Label>
+              <Select
+                value={formData.qualification}
+                onValueChange={(value) => setFormData({ ...formData, qualification: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="quente">🔥 Quente</SelectItem>
+                  <SelectItem value="morno">🌡️ Morno</SelectItem>
+                  <SelectItem value="frio">❄️ Frio</SelectItem>
+                  <SelectItem value="nao_qualificado">Não Qualificado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="stage">Estágio</Label>
+              <Select
+                value={formData.stage}
+                onValueChange={(value) => setFormData({ ...formData, stage: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="novo">Novo</SelectItem>
+                  <SelectItem value="contato_inicial">Contato Inicial</SelectItem>
+                  <SelectItem value="qualificacao">Qualificação</SelectItem>
+                  <SelectItem value="visita_agendada">Visita Agendada</SelectItem>
+                  <SelectItem value="proposta">Proposta</SelectItem>
+                  <SelectItem value="negociacao">Negociação</SelectItem>
+                  <SelectItem value="fechamento">Fechamento</SelectItem>
+                  <SelectItem value="pos_venda">Pós-venda</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveClient} disabled={!formData.name}>
+              {selectedLead ? "Salvar Alterações" : "Criar Cliente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o cliente <strong>{selectedLead?.name}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteClient} className="bg-red-600 hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
