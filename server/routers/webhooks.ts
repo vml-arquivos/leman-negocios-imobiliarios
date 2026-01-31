@@ -12,7 +12,7 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
-import { leads, owners } from "../../drizzle/schema";
+import { leads, owners, messageBuffer, aiContextStatus } from "../../drizzle/schema";
 import { eq, or, sql } from "drizzle-orm";
 
 // ============================================
@@ -93,6 +93,15 @@ export const webhooksRouter = router({
               updatedAt: new Date(),
             })
             .where(eq(leads.id, lead.id));
+
+          // Salvar no messageBuffer para histórico N8N
+          await db.insert(messageBuffer).values({
+            phone: input.phone,
+            messageId: input.messageId || `msg_${Date.now()}`,
+            content: input.message,
+            type: input.direction === 'in' ? 'incoming' : 'outgoing',
+            processed: 1,
+          });
 
           return {
             success: true,
