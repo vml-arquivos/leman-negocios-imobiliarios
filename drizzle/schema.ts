@@ -28,7 +28,10 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).default("user"),
   avatar_url: text("avatar_url"),
-  phone: varchar("phone", { length: 20 }),
+  telefone: varchar("telefone", { length: 20 }),
+  active: boolean("active").default(true),
+  login_method: varchar("login_method", { length: 50 }).default("local"),
+  last_signed_in: timestamp("last_signed_in").defaultNow().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
