@@ -8,7 +8,7 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
-import { leads, owners } from "../../drizzle/schema";
+import { leads } from "../../drizzle/schema";
 import { eq, or, sql } from "drizzle-orm";
 import {
   getOrCreateConversa,

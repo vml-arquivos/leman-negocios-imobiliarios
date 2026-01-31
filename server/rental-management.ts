@@ -11,7 +11,6 @@ import {
   rentalPayments,
   propertyExpenses,
   landlordTransfers,
-  rentAdjustments,
   type Landlord,
   type Tenant,
   type RentalContract,

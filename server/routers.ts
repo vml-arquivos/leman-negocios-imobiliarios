@@ -8,7 +8,7 @@ import * as db from "./db";
 import * as rentalMgmt from "./rental-management";
 import { getDb } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
-import { analyticsEvents, campaignSources, transactions, commissions, reviews, financingSimulations, leads, interactions, landlords, tenants, rentalPayments, propertyExpenses, landlordTransfers, rentalContracts, properties } from "../drizzle/schema";
+import { analyticsEvents, campaignSources, transactions, commissions, reviews, financingSimulations, leads, landlords, tenants, rentalPayments, propertyExpenses, landlordTransfers, rentalContracts, properties } from "../drizzle/schema";
 
 // ============================================
 // AUTH ROUTER

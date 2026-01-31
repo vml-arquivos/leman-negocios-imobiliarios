@@ -8,12 +8,11 @@
 import { getDb } from "./db";
 import { 
   n8nConversas, 
-  n8nMensagens, 
-  n8nFilaMensagens, 
+  n8nMensagens,
+  n8nFilaMensagens,
   n8nAutomacoesLog,
   n8nLigacoes,
-  leads, 
-  owners 
+  leads 
 } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 
@@ -261,20 +260,7 @@ export async function findClientByPhone(telefone: string): Promise<{
     };
   }
 
-  // Buscar em owners
-  const ownerResults = await db
-    .select()
-    .from(owners)
-    .where(eq(owners.phone, telefone))
-    .limit(1);
-
-  if (ownerResults.length > 0) {
-    return {
-      type: 'owner',
-      client: ownerResults[0],
-    };
-  }
-
+  // Não encontrado
   return null;
 }
 
