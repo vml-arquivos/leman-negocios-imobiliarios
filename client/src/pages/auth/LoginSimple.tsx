@@ -84,13 +84,7 @@ export default function LoginSimple() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="text-xs text-gray-500 space-y-2">
-            <p className="font-semibold">Credenciais de acesso:</p>
-            <p>Email: evandro@lemannegocios.com.br</p>
-            <p>Senha: admin123</p>
-          </div>
-        </div>
+
       </div>
     </div>
   );

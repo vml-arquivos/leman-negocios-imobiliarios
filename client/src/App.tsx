@@ -33,6 +33,7 @@ import SalesFunnel from "./pages/admin/SalesFunnel";
 import FinancingSimulator from "./pages/FinancingSimulatorNew";
 import SiteCustomization from "./pages/admin/SiteCustomization";
 import FinancialDashboardDemo from "./pages/admin/FinancialDashboardDemo";
+import FinancialDashboard from "./pages/admin/FinancialDashboard";
 import OwnerPortal from "./pages/OwnerPortal";
 import Login from "./pages/auth/Login";
 import LoginSimple from "./pages/auth/LoginSimple";
@@ -163,7 +164,7 @@ function Router() {
       <Route path="/admin/financial">
         {() => (
           <AdminLayout>
-            <FinancialDashboardDemo />
+            <FinancialDashboard />
           </AdminLayout>
         )}
       </Route>
