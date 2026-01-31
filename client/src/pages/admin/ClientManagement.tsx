@@ -285,7 +285,7 @@ export default function ClientManagement() {
       <div className="container py-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Gestão Inteligente de Clientes</h1>
+            <h1 className="text-3xl font-bold mb-2">Gestão Inteligente de Clientes</h1>
             <p className="text-muted-foreground">
               Segmentação automática e envio de imóveis pela IA
             </p>

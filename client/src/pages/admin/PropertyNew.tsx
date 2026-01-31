@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { ArrowLeft, Upload, X, Bot } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -142,7 +142,7 @@ export default function PropertyNew() {
 
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="text-3xl font-serif">Novo Imóvel</CardTitle>
+            <CardTitle className="text-2xl font-semibold">Novo Imóvel</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -162,12 +162,36 @@ export default function PropertyNew() {
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Descrição *</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="description">Descrição *</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (!formData.title || !formData.propertyType) {
+                          toast.error("Preencha o título e tipo do imóvel primeiro");
+                          return;
+                        }
+                        toast.info("🤖 Gerando descrição com IA...");
+                        // Simulação de IA - em produção, chamar API OpenAI
+                        setTimeout(() => {
+                          const aiDescription = `${formData.title} - Um imóvel excepcional que combina conforto, sofisticação e localização privilegiada. Este ${formData.propertyType} oferece acabamento de primeira qualidade, ambientes amplos e bem iluminados, além de toda a infraestrutura necessária para proporcionar qualidade de vida e bem-estar para você e sua família. Ideal para quem busca excelência em cada detalhe.`;
+                          setFormData({ ...formData, description: aiDescription });
+                          toast.success("✅ Descrição gerada! Você pode editar conforme necessário.");
+                        }, 1500);
+                      }}
+                      className="gap-2"
+                    >
+                      <Bot className="h-4 w-4" />
+                      Gerar com IA
+                    </Button>
+                  </div>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descreva o imóvel em detalhes..."
+                    placeholder="Descreva o imóvel em detalhes ou use o botão 'Gerar com IA'..."
                     rows={4}
                     required
                   />

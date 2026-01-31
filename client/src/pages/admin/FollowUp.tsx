@@ -73,7 +73,7 @@ export default function FollowUp() {
     <div className="min-h-screen bg-muted/30">
       <div className="container py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-serif font-bold mb-2 flex items-center gap-3">
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
             <AlertTriangle className="h-10 w-10 text-orange-500" />
             Follow-up Automático
           </h1>
@@ -268,7 +268,7 @@ export default function FollowUp() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <div className="mb-4 text-6xl">🎉</div>
+                <div className="mb-4 text-4xl">🎉</div>
                 <h3 className="text-xl font-semibold mb-2">Excelente trabalho!</h3>
                 <p className="text-muted-foreground">
                   Todos os clientes quentes estão recebendo atenção adequada

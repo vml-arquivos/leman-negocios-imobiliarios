@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreVertical, Pencil, Trash2, Eye, Search } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, Eye, Search, Building2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -62,20 +62,105 @@ export default function PropertiesAdmin() {
     return variants[status] || "bg-gray-100 text-gray-700";
   };
 
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      disponivel: "Disponível",
+      reservado: "Reservado",
+      vendido: "Vendido",
+      alugado: "Alugado",
+      inativo: "Inativo",
+      geladeira: "Geladeira",
+    };
+    return labels[status] || status;
+  };
+
+  // Estatísticas rápidas
+  const stats = {
+    total: properties?.length || 0,
+    disponivel: properties?.filter(p => p.status === 'disponivel').length || 0,
+    vendido: properties?.filter(p => p.status === 'vendido').length || 0,
+    alugado: properties?.filter(p => p.status === 'alugado').length || 0,
+  };
+
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="container py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Imóveis</h1>
+            <h1 className="text-3xl font-bold mb-2">Gestão de Imóveis</h1>
             <p className="text-muted-foreground">
-              Gerencie todos os imóveis cadastrados
+              Gerencie todos os imóveis cadastrados no sistema
             </p>
           </div>
-          <Button onClick={() => setLocation("/admin/properties/new")}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={() => setLocation("/admin/properties/new")} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
             Novo Imóvel
           </Button>
+        </div>
+
+        {/* Cards de Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total de Imóveis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold">{stats.total}</div>
+                <Building2 className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Disponíveis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold text-green-600">{stats.disponivel}</div>
+                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">
+                  ✓
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Vendidos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold text-red-600">{stats.vendido}</div>
+                <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold">
+                  $
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Alugados
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-3xl font-bold text-blue-600">{stats.alugado}</div>
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                  🏠
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Card className="border-0 shadow-md">
@@ -131,40 +216,37 @@ export default function PropertiesAdmin() {
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(property.status)}>
-                            {property.status}
+                            {getStatusLabel(property.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => setLocation(`/imoveis/${property.id}`)}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                Visualizar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setLocation(`/admin/properties/${property.id}`)
-                                }
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(property.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setLocation(`/imoveis/${property.id}`)}
+                              title="Visualizar"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setLocation(`/admin/properties/${property.id}`)}
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(property.id)}
+                              title="Excluir"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -173,10 +255,14 @@ export default function PropertiesAdmin() {
               </div>
             ) : (
               <div className="text-center py-12">
+                <Building2 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {searchTerm ? "Nenhum imóvel encontrado" : "Nenhum imóvel cadastrado"}
+                </h3>
                 <p className="text-muted-foreground mb-4">
                   {searchTerm
-                    ? "Nenhum imóvel encontrado com esses critérios"
-                    : "Nenhum imóvel cadastrado ainda"}
+                    ? "Tente buscar com outros termos"
+                    : "Comece cadastrando seu primeiro imóvel"}
                 </p>
                 {!searchTerm && (
                   <Button onClick={() => setLocation("/admin/properties/new")}>
