@@ -57,13 +57,13 @@ export const leads = pgTable("leads", {
 });
 
 // ============================================
-// TABELAS N8N (Onde o erro ocorreu)
+// TABELAS N8N
 // ============================================
 export const n8nConversas = pgTable("n8n_conversas", {
   id: serial("id").primaryKey(),
   telefone: varchar("telefone", { length: 20 }).notNull().unique(),
   leadId: integer("lead_id").references(() => leads.id),
-  metadata: jsonb("metadata").default({}), // Agora com import correto
+  metadata: jsonb("metadata").default({}),
   ultimaInteracao: timestamp("ultima_interacao").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
