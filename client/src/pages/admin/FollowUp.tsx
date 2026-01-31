@@ -71,7 +71,7 @@ export default function FollowUp() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container py-8">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
             <AlertTriangle className="h-10 w-10 text-orange-500" />

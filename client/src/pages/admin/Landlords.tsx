@@ -1,295 +1,422 @@
 import { useState } from "react";
-import { Plus, Search, Edit, Eye, DollarSign } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { Plus, Search, Edit, Eye, DollarSign, User, Phone, Mail, Building2, Loader2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 export default function Landlords() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    cpfCnpj: "",
+    email: "",
+    phone: "",
+    whatsapp: "",
+    address: "",
+    city: "",
+    state: "",
+    bankName: "",
+    pixKey: "",
+    notes: "",
+  });
 
-  // Mock data - substituir por chamada à API
-  const landlords = [
-    {
-      id: 1,
-      name: "João Silva",
-      cpfCnpj: "123.456.789-00",
-      email: "joao@email.com",
-      phone: "(61) 99999-9999",
-      propertiesCount: 3,
-      activeContracts: 2,
-      monthlyRevenue: 4500.00,
-      status: "ativo",
+  const { data: owners, isLoading, refetch } = trpc.owners.list.useQuery();
+  const createOwner = trpc.owners.create.useMutation({
+    onSuccess: () => {
+      toast.success("Proprietário cadastrado com sucesso!");
+      setShowModal(false);
+      setFormData({
+        name: "",
+        cpfCnpj: "",
+        email: "",
+        phone: "",
+        whatsapp: "",
+        address: "",
+        city: "",
+        state: "",
+        bankName: "",
+        pixKey: "",
+        notes: "",
+      });
+      refetch();
     },
-    {
-      id: 2,
-      name: "Maria Santos",
-      cpfCnpj: "987.654.321-00",
-      email: "maria@email.com",
-      phone: "(61) 98888-8888",
-      propertiesCount: 1,
-      activeContracts: 1,
-      monthlyRevenue: 2200.00,
-      status: "ativo",
+    onError: (error) => {
+      toast.error(`Erro ao cadastrar: ${error.message}`);
     },
-  ];
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+    await createOwner.mutateAsync({
+      name: formData.name,
+      cpfCnpj: formData.cpfCnpj || undefined,
+      email: formData.email || undefined,
+      phone: formData.phone || undefined,
+      whatsapp: formData.whatsapp || undefined,
+      address: formData.address || undefined,
+      city: formData.city || undefined,
+      state: formData.state || undefined,
+      bankName: formData.bankName || undefined,
+      pixKey: formData.pixKey || undefined,
+      notes: formData.notes || undefined,
+    });
+  };
+
+  const filteredOwners = owners?.filter((owner: any) =>
+    owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    owner.cpfCnpj?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    owner.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  // Estatísticas
+  const stats = {
+    total: owners?.length || 0,
+    active: owners?.filter((o: any) => o.active !== false).length || 0,
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-lg text-muted-foreground">Carregando proprietários...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Proprietários</h1>
-          <p className="text-gray-600">Gestão de proprietários de imóveis</p>
+    <div className="min-h-screen bg-muted/30">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Proprietários</h1>
+            <p className="text-muted-foreground">
+              Gestão de proprietários de imóveis
+            </p>
+          </div>
+          <Button onClick={() => setShowModal(true)} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
+            Novo Proprietário
+          </Button>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[#1a1f3c] text-white px-4 py-2 rounded-lg hover:bg-[#2a2f4c] transition"
-        >
-          <Plus size={20} />
-          Novo Proprietário
-        </button>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-gray-600 text-sm">Total de Proprietários</p>
-          <p className="text-2xl font-bold text-gray-900">{landlords.length}</p>
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total de Proprietários
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Proprietários Ativos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Imóveis Gerenciados
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Receita Mensal Total
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">-</div>
+            </CardContent>
+          </Card>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-gray-600 text-sm">Proprietários Ativos</p>
-          <p className="text-2xl font-bold text-green-600">
-            {landlords.filter(l => l.status === "ativo").length}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-gray-600 text-sm">Imóveis Gerenciados</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {landlords.reduce((sum, l) => sum + l.propertiesCount, 0)}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-gray-600 text-sm">Receita Mensal Total</p>
-          <p className="text-2xl font-bold text-[#c9a962]">
-            R$ {landlords.reduce((sum, l) => sum + l.monthlyRevenue, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
 
-      {/* Search */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Buscar por nome, CPF/CNPJ ou email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962] focus:border-transparent"
-          />
-        </div>
-      </div>
+        {/* Search */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Buscar por nome, CPF/CNPJ ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Proprietário
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                CPF/CNPJ
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contato
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Imóveis
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Receita Mensal
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {landlords.map((landlord) => (
-              <tr key={landlord.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-[#1a1f3c] flex items-center justify-center text-white font-bold">
-                      {landlord.name.charAt(0)}
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{landlord.name}</div>
-                      <div className="text-sm text-gray-500">{landlord.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {landlord.cpfCnpj}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {landlord.phone}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <div className="flex flex-col">
-                    <span>{landlord.propertiesCount} imóveis</span>
-                    <span className="text-xs text-gray-500">{landlord.activeContracts} contratos ativos</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#c9a962]">
-                  R$ {landlord.monthlyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    landlord.status === "ativo" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                  }`}>
-                    {landlord.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex gap-2">
-                    <button className="text-[#1a1f3c] hover:text-[#c9a962]" title="Ver Detalhes">
-                      <Eye size={18} />
-                    </button>
-                    <button className="text-[#1a1f3c] hover:text-[#c9a962]" title="Editar">
-                      <Edit size={18} />
-                    </button>
-                    <button className="text-[#1a1f3c] hover:text-[#c9a962]" title="Relatório Financeiro">
-                      <DollarSign size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Proprietários</CardTitle>
+            <CardDescription>
+              {filteredOwners.length} proprietário(s) encontrado(s)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Proprietário</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOwners.length > 0 ? (
+                    filteredOwners.map((owner: any) => (
+                      <TableRow key={owner.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-medium">{owner.name}</div>
+                              <div className="text-sm text-muted-foreground">{owner.email}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {owner.cpfCnpj || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {owner.phone && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Phone className="h-3 w-3 text-muted-foreground" />
+                                {owner.phone}
+                              </div>
+                            )}
+                            {owner.whatsapp && (
+                              <div className="flex items-center gap-1 text-sm text-green-600">
+                                <Phone className="h-3 w-3" />
+                                {owner.whatsapp}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={owner.active !== false ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
+                            {owner.active !== false ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Button size="sm" variant="ghost" title="Ver Detalhes">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" title="Editar">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              title="Relatório Financeiro"
+                              onClick={() => setLocation('/admin/financial')}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12">
+                        <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">Nenhum proprietário encontrado</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Modal de Cadastro */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Novo Proprietário</h2>
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Proprietário</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo proprietário no sistema
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome Completo *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Nome completo"
+                  required
+                />
+              </div>
               
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nome Completo *
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      CPF/CNPJ *
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Telefone *
-                    </label>
-                    <input
-                      type="tel"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 mt-4">
-                  <h3 className="font-semibold text-gray-900 mb-4">Dados Bancários</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Banco
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Agência
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Conta
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Chave PIX
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#c9a962]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#1a1f3c] text-white rounded-lg hover:bg-[#2a2f4c]"
-                  >
-                    Salvar Proprietário
-                  </button>
-                </div>
-              </form>
+              <div className="space-y-2">
+                <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
+                <Input
+                  id="cpfCnpj"
+                  value={formData.cpfCnpj}
+                  onChange={(e) => setFormData({ ...formData, cpfCnpj: e.target.value })}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <Input
+                  id="whatsapp"
+                  value={formData.whatsapp}
+                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Rua, número, bairro"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  placeholder="Cidade"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="state">Estado</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  placeholder="UF"
+                  maxLength={2}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="bankName">Banco</Label>
+                <Input
+                  id="bankName"
+                  value={formData.bankName}
+                  onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                  placeholder="Nome do banco"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="pixKey">Chave PIX</Label>
+                <Input
+                  id="pixKey"
+                  value={formData.pixKey}
+                  onChange={(e) => setFormData({ ...formData, pixKey: e.target.value })}
+                  placeholder="Chave PIX"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={createOwner.isPending}>
+                {createOwner.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Cadastrar Proprietário"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

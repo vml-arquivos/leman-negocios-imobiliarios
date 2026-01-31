@@ -124,8 +124,8 @@ export default function SalesFunnel() {
   const activeLead = activeId ? leads.find((l: Lead) => l.id === activeId) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-muted/30">
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

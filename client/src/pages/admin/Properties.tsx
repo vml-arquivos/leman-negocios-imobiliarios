@@ -84,7 +84,7 @@ export default function PropertiesAdmin() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container py-8">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">Gestão de Imóveis</h1>

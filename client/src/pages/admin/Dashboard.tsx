@@ -107,7 +107,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="min-h-screen bg-muted/30">
+    <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>
@@ -421,6 +422,7 @@ export default function Dashboard() {
           </Card>
         </Link>
       </div>
+    </div>
     </div>
   );
 }

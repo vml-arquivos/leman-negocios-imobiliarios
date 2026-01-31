@@ -157,7 +157,8 @@ export default function PropertyOwners() {
   ) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-muted/30">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -480,6 +481,7 @@ export default function PropertyOwners() {
           </TableBody>
         </Table>
       </div>
+    </div>
     </div>
   );
 }

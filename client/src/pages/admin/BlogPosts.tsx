@@ -43,7 +43,8 @@ export default function BlogPosts() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-muted/30">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Posts do Blog</h1>
@@ -156,6 +157,7 @@ export default function BlogPosts() {
           )}
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -13,6 +13,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  Area,
+  AreaChart,
 } from 'recharts';
 import {
   TrendingUp,
@@ -31,6 +33,12 @@ import {
   Calendar,
   X,
   Loader2,
+  Wallet,
+  PiggyBank,
+  Receipt,
+  CreditCard,
+  ChevronDown,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,12 +63,36 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value / 100);
+};
+
+const formatCurrencyShort = (value: number) => {
+  if (value >= 100000000) {
+    return `R$ ${(value / 100000000).toFixed(1)}M`;
+  }
+  if (value >= 100000) {
+    return `R$ ${(value / 100000).toFixed(1)}K`;
+  }
+  return formatCurrency(value);
 };
 
 const FinancialDashboard: React.FC = () => {
@@ -72,7 +104,7 @@ const FinancialDashboard: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Queries tRPC
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = trpc.financial.getStats.useQuery();
@@ -114,6 +146,16 @@ const FinancialDashboard: React.FC = () => {
     filterType !== 'all' || filterCategory !== 'all' || filterStatus !== 'all' ||
     startDate || endDate;
 
+  const activeFiltersCount = [
+    filterOwnerId !== 'all',
+    filterPropertyId !== 'all',
+    filterType !== 'all',
+    filterCategory !== 'all',
+    filterStatus !== 'all',
+    !!startDate,
+    !!endDate,
+  ].filter(Boolean).length;
+
   // Limpar filtros
   const clearFilters = () => {
     setFilterOwnerId('all');
@@ -128,12 +170,44 @@ const FinancialDashboard: React.FC = () => {
   // Cores para os gráficos
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+  // Gerar dados de evolução mensal
+  const monthlyEvolutionData = useMemo(() => {
+    const monthlyData: Record<string, { month: string; receita: number; despesa: number; lucro: number }> = {};
+    
+    transactions.forEach((t: any) => {
+      const date = new Date(t.createdAt);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { month: monthLabel, receita: 0, despesa: 0, lucro: 0 };
+      }
+      
+      const amount = Number(t.amount) / 100;
+      if (t.type === 'revenue' || t.type === 'commission') {
+        monthlyData[monthKey].receita += amount;
+      } else if (t.type === 'expense') {
+        monthlyData[monthKey].despesa += amount;
+      }
+    });
+    
+    // Calcular lucro
+    Object.values(monthlyData).forEach(m => {
+      m.lucro = m.receita - m.despesa;
+    });
+    
+    return Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, data]) => data)
+      .slice(-12); // Últimos 12 meses
+  }, [transactions]);
+
   // Funções auxiliares
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <Clock className="w-4 h-4" /> },
-      paid: { bg: 'bg-green-100', text: 'text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-800', icon: <AlertCircle className="w-4 h-4" /> },
+    const statusMap: Record<string, { bg: string; text: string; icon: React.ReactNode; label: string }> = {
+      pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-400', icon: <Clock className="w-3 h-3" />, label: 'Pendente' },
+      paid: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-400', icon: <CheckCircle className="w-3 h-3" />, label: 'Pago' },
+      cancelled: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-400', icon: <AlertCircle className="w-3 h-3" />, label: 'Cancelado' },
     };
     return statusMap[status] || statusMap['pending'];
   };
@@ -156,6 +230,16 @@ const FinancialDashboard: React.FC = () => {
       commission: 'text-purple-600',
     };
     return colorMap[type] || 'text-gray-600';
+  };
+
+  const getTypeIcon = (type: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      revenue: <ArrowUpRight className="h-4 w-4 text-green-600" />,
+      expense: <ArrowDownLeft className="h-4 w-4 text-red-600" />,
+      transfer: <CreditCard className="h-4 w-4 text-blue-600" />,
+      commission: <Receipt className="h-4 w-4 text-purple-600" />,
+    };
+    return iconMap[type] || <DollarSign className="h-4 w-4" />;
   };
 
   const handleRefresh = async () => {
@@ -186,16 +270,19 @@ const FinancialDashboard: React.FC = () => {
   };
 
   // Preparar dados para gráficos
-  const chartData = [
+  const pieChartData = [
     { name: 'Receita', value: (summary.totalRevenue || 0) / 100, fill: '#10b981' },
     { name: 'Despesas', value: (summary.totalExpenses || 0) / 100, fill: '#ef4444' },
     { name: 'Repasses', value: (summary.totalTransfers || 0) / 100, fill: '#3b82f6' },
     { name: 'Comissões', value: (summary.totalCommissions || 0) / 100, fill: '#8b5cf6' },
-  ];
+  ].filter(d => d.value > 0);
+
+  // Calcular lucro líquido
+  const netProfit = (summary.totalRevenue || 0) + (summary.totalCommissions || 0) - (summary.totalExpenses || 0) - (summary.totalTransfers || 0);
 
   if (statsLoading && !statsData) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-lg text-muted-foreground">Carregando dados financeiros...</p>
@@ -205,37 +292,66 @@ const FinancialDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Dashboard Financeiro</h1>
-          <p className="text-muted-foreground">Visão geral das finanças da imobiliária</p>
+          <h1 className="text-3xl font-bold">Dashboard Financeiro</h1>
+          <p className="text-muted-foreground">Inteligência financeira para tomada de decisão</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" className="relative">
-                <Filter className="w-4 h-4 mr-2" />
-                Filtros
+          <Button variant="outline" onClick={handleRefresh} size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button variant="outline" onClick={handleExport} size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Exportar CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Filtros Granulares no Topo */}
+      <Card>
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Filtros Avançados</CardTitle>
                 {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full" />
+                  <Badge variant="secondary" className="ml-2">
+                    {activeFiltersCount} ativo{activeFiltersCount > 1 ? 's' : ''}
+                  </Badge>
                 )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle>Filtros Avançados</SheetTitle>
-                <SheetDescription>
-                  Filtre as transações por proprietário, imóvel, tipo e mais
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6 space-y-4">
+              </div>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </div>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Filtro por Proprietário */}
                 <div className="space-y-2">
-                  <Label>Proprietário</Label>
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Proprietário
+                  </Label>
                   <Select value={filterOwnerId} onValueChange={setFilterOwnerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos os proprietários" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os proprietários</SelectItem>
@@ -248,11 +364,15 @@ const FinancialDashboard: React.FC = () => {
                   </Select>
                 </div>
 
+                {/* Filtro por Imóvel */}
                 <div className="space-y-2">
-                  <Label>Imóvel</Label>
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Imóvel
+                  </Label>
                   <Select value={filterPropertyId} onValueChange={setFilterPropertyId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos os imóveis" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os imóveis</SelectItem>
@@ -265,11 +385,15 @@ const FinancialDashboard: React.FC = () => {
                   </Select>
                 </div>
 
+                {/* Filtro por Tipo */}
                 <div className="space-y-2">
-                  <Label>Tipo</Label>
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Receipt className="h-3 w-3" />
+                    Tipo
+                  </Label>
                   <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos os tipos" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os tipos</SelectItem>
@@ -281,187 +405,155 @@ const FinancialDashboard: React.FC = () => {
                   </Select>
                 </div>
 
+                {/* Filtro por Status */}
                 <div className="space-y-2">
-                  <Label>Categoria</Label>
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Status
+                  </Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="paid">Pago</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por Categoria */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <FileSpreadsheet className="h-3 w-3" />
+                    Categoria
+                  </Label>
                   <Select value={filterCategory} onValueChange={setFilterCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todas as categorias" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as categorias</SelectItem>
-                      {categoriesList?.map((category: string) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                      {categoriesList?.map((cat: string) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {/* Filtro por Data Início */}
                 <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos os status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os status</SelectItem>
-                      <SelectItem value="paid">Pago</SelectItem>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="cancelled">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Data Início
+                  </Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="h-9"
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data Início</Label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Data Fim</Label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button variant="outline" onClick={clearFilters} className="flex-1">
-                    Limpar
-                  </Button>
-                  <Button onClick={() => setIsFilterSheetOpen(false)} className="flex-1">
-                    Aplicar
-                  </Button>
+                {/* Filtro por Data Fim */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Data Fim
+                  </Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="h-9"
+                  />
                 </div>
               </div>
-            </SheetContent>
-          </Sheet>
-
-          <Button variant="outline" onClick={handleRefresh} disabled={filteredLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${filteredLoading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          <Button onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </Button>
-        </div>
-      </div>
-
-      {/* Filtros Ativos */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Filtros ativos:</span>
-          {filterOwnerId !== 'all' && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              {ownersList?.find((o: any) => o.id === Number(filterOwnerId))?.name}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterOwnerId('all')} />
-            </Badge>
-          )}
-          {filterPropertyId !== 'all' && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Building2 className="h-3 w-3" />
-              {propertiesList?.find((p: any) => p.id === Number(filterPropertyId))?.title}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterPropertyId('all')} />
-            </Badge>
-          )}
-          {filterType !== 'all' && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              {getTypeLabel(filterType)}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterType('all')} />
-            </Badge>
-          )}
-          {(startDate || endDate) && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {startDate && endDate ? `${startDate} - ${endDate}` : startDate || endDate}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => { setStartDate(''); setEndDate(''); }} />
-            </Badge>
-          )}
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            Limpar todos
-          </Button>
-        </div>
-      )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-green-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Receita Total
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <ArrowUpRight className="h-4 w-4 text-green-500" />
+              Receitas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-xl md:text-2xl font-bold text-green-600">
-                {formatCurrency(hasActiveFilters ? (summary.totalRevenue || 0) : (statsData?.totalRevenue || 0))}
-              </div>
-              <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-green-500" />
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(summary.totalRevenue || 0)}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              + Comissões: {formatCurrency(summary.totalCommissions || 0)}
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-red-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <ArrowDownLeft className="h-4 w-4 text-red-500" />
               Despesas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-xl md:text-2xl font-bold text-red-600">
-                {formatCurrency(hasActiveFilters ? (summary.totalExpenses || 0) : (statsData?.totalExpenses || 0))}
-              </div>
-              <TrendingDown className="h-6 w-6 md:h-8 md:w-8 text-red-500" />
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(summary.totalExpenses || 0)}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Repasses: {formatCurrency(summary.totalTransfers || 0)}
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Repasses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-xl md:text-2xl font-bold text-blue-600">
-                {formatCurrency(hasActiveFilters ? (summary.totalTransfers || 0) : (statsData?.totalRepasses || 0))}
-              </div>
-              <ArrowDownLeft className="h-6 w-6 md:h-8 md:w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-indigo-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-blue-500" />
               Lucro Líquido
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className={`text-xl md:text-2xl font-bold ${
-                (statsData?.netProfit || 0) > 0 ? 'text-indigo-600' : 'text-red-600'
-              }`}>
-                {formatCurrency(statsData?.netProfit || 0)}
-              </div>
-              <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-indigo-500" />
+            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              {formatCurrency(netProfit)}
             </div>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              {netProfit >= 0 ? (
+                <><TrendingUp className="h-3 w-3 text-green-500" /> Positivo</>
+              ) : (
+                <><TrendingDown className="h-3 w-3 text-red-500" /> Negativo</>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <PiggyBank className="h-4 w-4 text-purple-500" />
+              Transações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">
+              {summary.count || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              No período selecionado
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs de Relatórios */}
+      {/* Tabs de Visualização */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
@@ -473,24 +565,99 @@ const FinancialDashboard: React.FC = () => {
         <TabsContent value="overview" className="space-y-4">
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Gráfico de Evolução Mensal */}
             <Card>
               <CardHeader>
-                <CardTitle>Distribuição por Tipo</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Evolução do Lucro Líquido
+                </CardTitle>
+                <CardDescription>Últimos 12 meses</CardDescription>
               </CardHeader>
               <CardContent>
-                {chartData.some(d => d.value > 0) ? (
+                {monthlyEvolutionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={monthlyEvolutionData}>
+                      <defs>
+                        <linearGradient id="colorLucro" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="month" className="text-xs" />
+                      <YAxis className="text-xs" tickFormatter={(v) => `R$ ${v.toFixed(0)}`} />
+                      <Tooltip 
+                        formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                        contentStyle={{ 
+                          backgroundColor: 'var(--background)', 
+                          border: '1px solid var(--border)',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Legend />
+                      <Area 
+                        type="monotone" 
+                        dataKey="lucro" 
+                        name="Lucro Líquido"
+                        stroke="#3b82f6" 
+                        fillOpacity={1} 
+                        fill="url(#colorLucro)" 
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="receita" 
+                        name="Receita"
+                        stroke="#10b981" 
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="despesa" 
+                        name="Despesa"
+                        stroke="#ef4444" 
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    <div className="text-center">
+                      <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                      <p>Sem dados para exibir</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Gráfico de Distribuição */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <PiggyBank className="h-4 w-4" />
+                  Distribuição por Tipo
+                </CardTitle>
+                <CardDescription>Composição das transações</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pieChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={chartData}
+                        data={pieChartData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${formatCurrency(value * 100)}`}
-                        outerRadius={80}
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
                         dataKey="value"
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {chartData.map((entry, index) => (
+                        {pieChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
                       </Pie>
@@ -499,34 +666,10 @@ const FinancialDashboard: React.FC = () => {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                    Sem dados para exibir
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Comparativo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {chartData.some(d => d.value > 0) ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip formatter={(value: number) => formatCurrency(value * 100)} />
-                      <Bar dataKey="value" fill="#8884d8">
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                    Sem dados para exibir
+                    <div className="text-center">
+                      <PiggyBank className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                      <p>Sem dados para exibir</p>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -536,9 +679,9 @@ const FinancialDashboard: React.FC = () => {
           {/* Tabela de Transações */}
           <Card>
             <CardHeader>
-              <CardTitle>Transações ({transactions.length})</CardTitle>
+              <CardTitle className="text-base">Transações Recentes</CardTitle>
               <CardDescription>
-                Lista de transações com os filtros aplicados
+                {transactions.length} transação(ões) encontrada(s)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -548,51 +691,63 @@ const FinancialDashboard: React.FC = () => {
                 </div>
               ) : transactions.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted border-b">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Descrição</th>
-                        <th className="px-4 py-3 text-left font-semibold">Tipo</th>
-                        <th className="px-4 py-3 text-left font-semibold">Categoria</th>
-                        <th className="px-4 py-3 text-right font-semibold">Valor</th>
-                        <th className="px-4 py-3 text-left font-semibold">Status</th>
-                        <th className="px-4 py-3 text-left font-semibold">Data</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((transaction: any) => {
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Data</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.slice(0, 20).map((transaction: any) => {
                         const statusBadge = getStatusBadge(transaction.status);
                         return (
-                          <tr key={transaction.id} className="border-b hover:bg-muted/50">
-                            <td className="px-4 py-3 font-medium">{transaction.description}</td>
-                            <td className="px-4 py-3">
-                              <span className={`font-semibold ${getTypeColor(transaction.type)}`}>
-                                {getTypeLabel(transaction.type)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">{transaction.category || '-'}</td>
-                            <td className="px-4 py-3 text-right font-semibold">
+                          <TableRow key={transaction.id}>
+                            <TableCell className="font-medium max-w-[200px] truncate">
+                              {transaction.description}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {getTypeIcon(transaction.type)}
+                                <span className={`font-medium ${getTypeColor(transaction.type)}`}>
+                                  {getTypeLabel(transaction.type)}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {transaction.category || '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
                               {formatCurrency(Number(transaction.amount))}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`${statusBadge.bg} ${statusBadge.text} gap-1`}>
                                 {statusBadge.icon}
-                                {transaction.status === 'pending' ? 'Pendente' : transaction.status === 'paid' ? 'Pago' : 'Cancelado'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                                {statusBadge.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
                               {new Date(transaction.createdAt).toLocaleDateString('pt-BR')}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">Nenhuma transação encontrada</p>
+                  {hasActiveFilters && (
+                    <Button variant="link" onClick={clearFilters} className="mt-2">
+                      Limpar filtros
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -603,9 +758,12 @@ const FinancialDashboard: React.FC = () => {
         <TabsContent value="by-owner" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Relatório por Proprietário</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Relatório por Proprietário
+              </CardTitle>
               <CardDescription>
-                Selecione um proprietário para ver o relatório detalhado
+                Selecione um proprietário para ver o extrato detalhado
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -617,13 +775,16 @@ const FinancialDashboard: React.FC = () => {
                     setSelectedReportId(Number(value));
                   }}
                 >
-                  <SelectTrigger className="w-full md:w-[300px]">
-                    <SelectValue placeholder="Selecione um proprietário" />
+                  <SelectTrigger className="w-full md:w-[400px]">
+                    <SelectValue placeholder="Selecione um proprietário..." />
                   </SelectTrigger>
                   <SelectContent>
                     {ownersList?.map((owner: any) => (
                       <SelectItem key={owner.id} value={String(owner.id)}>
-                        {owner.name}
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          {owner.name}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -636,41 +797,46 @@ const FinancialDashboard: React.FC = () => {
                 )}
 
                 {ownerReport && (
-                  <div className="space-y-4 mt-4">
-                    <div className="p-4 bg-muted rounded-lg">
-                      <h3 className="font-semibold text-lg">{ownerReport.owner.name}</h3>
-                      <p className="text-sm text-muted-foreground">{ownerReport.owner.email}</p>
+                  <div className="space-y-4 mt-6">
+                    <div className="p-4 bg-muted rounded-lg flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{ownerReport.owner.name}</h3>
+                        <p className="text-sm text-muted-foreground">{ownerReport.owner.email}</p>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <Card>
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <p className="text-xs text-muted-foreground">Aluguéis Recebidos</p>
-                          <p className="text-lg font-bold text-green-600">
+                          <p className="text-xl font-bold text-green-600">
                             {formatCurrency(ownerReport.summary.totalRentReceived)}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <p className="text-xs text-muted-foreground">Comissões</p>
-                          <p className="text-lg font-bold text-purple-600">
+                          <p className="text-xl font-bold text-purple-600">
                             {formatCurrency(ownerReport.summary.totalCommissions)}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <p className="text-xs text-muted-foreground">Despesas</p>
-                          <p className="text-lg font-bold text-red-600">
+                          <p className="text-xl font-bold text-red-600">
                             {formatCurrency(ownerReport.summary.totalExpenses)}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <p className="text-xs text-muted-foreground">Pendente Repasse</p>
-                          <p className="text-lg font-bold text-yellow-600">
+                          <p className="text-xl font-bold text-yellow-600">
                             {formatCurrency(ownerReport.summary.pendingTransfer)}
                           </p>
                         </CardContent>
@@ -678,28 +844,36 @@ const FinancialDashboard: React.FC = () => {
                     </div>
 
                     <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Contratos Ativos: {ownerReport.summary.activeContracts}</CardTitle>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">
+                          Contratos Ativos: {ownerReport.summary.activeContracts}
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <ScrollArea className="h-[200px]">
                           <div className="space-y-2">
-                            {ownerReport.contracts.map((contract: any) => (
-                              <div key={contract.id} className="flex items-center justify-between p-3 bg-muted rounded">
-                                <div>
-                                  <p className="font-medium">Contrato #{contract.contractNumber || contract.id}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(contract.startDate).toLocaleDateString('pt-BR')} - {new Date(contract.endDate).toLocaleDateString('pt-BR')}
-                                  </p>
+                            {ownerReport.contracts.length > 0 ? (
+                              ownerReport.contracts.map((contract: any) => (
+                                <div key={contract.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                  <div>
+                                    <p className="font-medium">Contrato #{contract.contractNumber || contract.id}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(contract.startDate).toLocaleDateString('pt-BR')} - {new Date(contract.endDate).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium">{formatCurrency(contract.rentAmount)}/mês</p>
+                                    <Badge className={contract.status === 'ativo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                                      {contract.status}
+                                    </Badge>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <p className="font-medium">{formatCurrency(contract.rentAmount)}/mês</p>
-                                  <Badge className={contract.status === 'ativo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
-                                    {contract.status}
-                                  </Badge>
-                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                Nenhum contrato encontrado
                               </div>
-                            ))}
+                            )}
                           </div>
                         </ScrollArea>
                       </CardContent>
@@ -715,9 +889,12 @@ const FinancialDashboard: React.FC = () => {
         <TabsContent value="by-property" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Relatório por Imóvel</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Relatório por Imóvel
+              </CardTitle>
               <CardDescription>
-                Selecione um imóvel para ver o relatório detalhado
+                Selecione um imóvel para ver o fluxo financeiro
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -729,13 +906,16 @@ const FinancialDashboard: React.FC = () => {
                     setSelectedReportId(Number(value));
                   }}
                 >
-                  <SelectTrigger className="w-full md:w-[300px]">
-                    <SelectValue placeholder="Selecione um imóvel" />
+                  <SelectTrigger className="w-full md:w-[400px]">
+                    <SelectValue placeholder="Selecione um imóvel..." />
                   </SelectTrigger>
                   <SelectContent>
                     {propertiesList?.map((property: any) => (
                       <SelectItem key={property.id} value={String(property.id)}>
-                        {property.title}
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {property.title}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -748,62 +928,93 @@ const FinancialDashboard: React.FC = () => {
                 )}
 
                 {propertyReport && (
-                  <div className="space-y-4 mt-4">
-                    <div className="p-4 bg-muted rounded-lg">
-                      <h3 className="font-semibold text-lg">{propertyReport.property.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {propertyReport.property.neighborhood}, {propertyReport.property.city}
-                      </p>
+                  <div className="space-y-4 mt-6">
+                    <div className="p-4 bg-muted rounded-lg flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Building2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{propertyReport.property.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {propertyReport.property.address}, {propertyReport.property.neighborhood}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <Card>
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <p className="text-xs text-muted-foreground">Receita Total</p>
-                          <p className="text-lg font-bold text-green-600">
+                          <p className="text-xl font-bold text-green-600">
                             {formatCurrency(propertyReport.summary.totalRentReceived)}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
-                        <CardContent className="p-4">
+                        <CardContent className="pt-4">
                           <p className="text-xs text-muted-foreground">Despesas</p>
-                          <p className="text-lg font-bold text-red-600">
+                          <p className="text-xl font-bold text-red-600">
                             {formatCurrency(propertyReport.summary.totalExpenses)}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
-                        <CardContent className="p-4">
-                          <p className="text-xs text-muted-foreground">Comissões</p>
-                          <p className="text-lg font-bold text-purple-600">
-                            {formatCurrency(propertyReport.summary.totalCommissions)}
+                        <CardContent className="pt-4">
+                          <p className="text-xs text-muted-foreground">Lucro Líquido</p>
+                          <p className="text-xl font-bold text-blue-600">
+                            {formatCurrency(propertyReport.summary.netProfit)}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
-                        <CardContent className="p-4">
-                          <p className="text-xs text-muted-foreground">Lucro Líquido</p>
-                          <p className={`text-lg font-bold ${propertyReport.summary.netProfit > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(propertyReport.summary.netProfit)}
+                        <CardContent className="pt-4">
+                          <p className="text-xs text-muted-foreground">Taxa Ocupação</p>
+                          <p className="text-xl font-bold text-purple-600">
+                            {propertyReport.summary.occupancyRate}%
                           </p>
                         </CardContent>
                       </Card>
                     </div>
 
                     <Card>
-                      <CardHeader>
+                      <CardHeader className="pb-3">
                         <CardTitle className="text-base">
-                          Taxa de Ocupação: {propertyReport.summary.occupancyRate}%
+                          Histórico de Pagamentos
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="w-full h-4 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-full bg-green-500 rounded-full transition-all"
-                            style={{ width: `${propertyReport.summary.occupancyRate}%` }}
-                          />
-                        </div>
+                        <ScrollArea className="h-[200px]">
+                          <div className="space-y-2">
+                            {propertyReport.payments.length > 0 ? (
+                              propertyReport.payments.map((payment: any) => (
+                                <div key={payment.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                  <div>
+                                    <p className="font-medium">Ref: {payment.referenceMonth}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Vencimento: {new Date(payment.dueDate).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium">{formatCurrency(payment.totalAmount)}</p>
+                                    <Badge className={
+                                      payment.status === 'pago' 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : payment.status === 'atrasado'
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-yellow-100 text-yellow-700'
+                                    }>
+                                      {payment.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                Nenhum pagamento encontrado
+                              </div>
+                            )}
+                          </div>
+                        </ScrollArea>
                       </CardContent>
                     </Card>
                   </div>
