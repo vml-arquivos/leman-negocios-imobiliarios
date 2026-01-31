@@ -105,14 +105,14 @@ function Router() {
       <Route path="/admin/leads/new">
         {() => <LeadEdit />}
       </Route>
-      <Route path="/admin/clientes-gestao">
+      <Route path="/admin/clients-gestao">
         {() => (
           <AdminLayout>
             <ClientsManagement />
           </AdminLayout>
         )}
       </Route>
-      <Route path="/admin/clientes">
+      <Route path="/admin/clients">
         {() => (
           <AdminLayout>
             <ClientManagement />

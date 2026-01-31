@@ -32,7 +32,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "Imóveis", href: "/admin/properties", icon: Building2 },
     { name: "Leads", href: "/admin/leads", icon: Users },
-    { name: "Gestão de Clientes", href: "/admin/clientes", icon: Bot },
+    { name: "Gestão de Clientes", href: "/admin/clients", icon: Bot },
     { name: "Follow-up Automático", href: "/admin/followup", icon: Bell, badge: true },
     { name: "Financeiro", href: "/admin/financial", icon: DollarSign },
     { name: "Blog", href: "/admin/blog", icon: FileText },
