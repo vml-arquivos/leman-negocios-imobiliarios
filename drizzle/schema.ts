@@ -198,6 +198,16 @@ export const leads = pgTable("leads", {
   score: integer("score").default(0), // 0-100
   priority: priorityEnum("priority").default("media"),
   
+  // N8N Integration - WhatsApp Conversations
+  n8nConversas: jsonb("n8n_conversas").$type<Array<{
+    phone: string;
+    message: string;
+    direction: 'in' | 'out';
+    timestamp: string;
+    messageId?: string;
+  }>>().default([]),
+  lastMessageAt: timestamp("last_message_at"),
+  
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -439,6 +449,16 @@ export const owners = pgTable("owners", {
   
   // Status
   active: boolean("active").default(true),
+  
+  // N8N Integration - WhatsApp Conversations
+  n8nConversas: jsonb("n8n_conversas").$type<Array<{
+    phone: string;
+    message: string;
+    direction: 'in' | 'out';
+    timestamp: string;
+    messageId?: string;
+  }>>().default([]),
+  lastMessageAt: timestamp("last_message_at"),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -1077,53 +1097,4 @@ export const bankAccounts = pgTable("bank_accounts", {
 });
 
 
-// ============================================
-// TABELA DE SIMULAÇÕES DE FINANCIAMENTO
-// ============================================
-
-export const simulationStatusEnum = pgEnum("simulation_status", ["pendente", "contatado", "convertido", "perdido"]);
-
-export const financingSimulations = pgTable("financing_simulations", {
-  id: serial("id").primaryKey(),
-  
-  // Dados do Cliente
-  name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 320 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  cpf: varchar("cpf", { length: 14 }),
-  
-  // Dados da Simulação
-  propertyValue: integer("property_value").notNull(), // Valor do imóvel em centavos
-  downPayment: integer("down_payment").notNull(), // Entrada em centavos
-  financedAmount: integer("financed_amount").notNull(), // Valor financiado em centavos
-  termMonths: integer("term_months").notNull(), // Prazo em meses
-  interestRate: varchar("interest_rate", { length: 10 }).notNull(), // Taxa de juros anual (ex: "9.50")
-  amortizationSystem: amortizationSystemEnum("amortization_system").notNull(), // SAC ou PRICE
-  monthlyPayment: integer("monthly_payment").notNull(), // Parcela mensal em centavos
-  totalAmount: integer("total_amount").notNull(), // Valor total a pagar em centavos
-  
-  // Dados Adicionais
-  monthlyIncome: integer("monthly_income"), // Renda mensal em centavos
-  propertyId: integer("property_id"), // Imóvel de interesse (opcional)
-  notes: text("notes"),
-  
-  // Status e Acompanhamento
-  status: simulationStatusEnum("status").default("pendente").notNull(),
-  contactedAt: timestamp("contacted_at"),
-  convertedAt: timestamp("converted_at"),
-  lostReason: text("lost_reason"),
-  
-  // Metadados
-  ipAddress: varchar("ip_address", { length: 45 }),
-  userAgent: text("user_agent"),
-  utmSource: varchar("utm_source", { length: 100 }),
-  utmMedium: varchar("utm_medium", { length: 100 }),
-  utmCampaign: varchar("utm_campaign", { length: 100 }),
-  
-  // Timestamps
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export type FinancingSimulation = typeof financingSimulations.$inferSelect;
-export type InsertFinancingSimulation = typeof financingSimulations.$inferInsert;
+// Duplicate removed - financingSimulations already defined above
