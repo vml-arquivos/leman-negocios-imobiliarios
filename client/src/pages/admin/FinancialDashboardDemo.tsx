@@ -72,7 +72,7 @@ export default function FinancialDashboardDemo() {
       </div>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-green-600">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Receita Total</CardTitle>
@@ -191,7 +191,8 @@ export default function FinancialDashboardDemo() {
             </select>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative">
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none md:hidden" />
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
