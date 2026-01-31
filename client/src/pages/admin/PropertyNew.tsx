@@ -368,6 +368,7 @@ export default function PropertyNew() {
                         <SelectItem value="vendido">Vendido</SelectItem>
                         <SelectItem value="alugado">Alugado</SelectItem>
                         <SelectItem value="inativo">Inativo</SelectItem>
+                        <SelectItem value="geladeira">Geladeira</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

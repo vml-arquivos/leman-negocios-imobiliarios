@@ -38,7 +38,7 @@ export default function PropertyEdit() {
     bathrooms: number;
     parkingSpaces: number;
     totalArea: number;
-    status: "disponivel" | "reservado" | "vendido" | "alugado" | "inativo";
+    status: "disponivel" | "reservado" | "vendido" | "alugado" | "inativo" | "geladeira";
     featured: boolean;
   }>({
     title: "",
@@ -258,6 +258,7 @@ export default function PropertyEdit() {
                           <SelectItem value="vendido">Vendido</SelectItem>
                           <SelectItem value="alugado">Alugado</SelectItem>
                           <SelectItem value="inativo">Inativo</SelectItem>
+                          <SelectItem value="geladeira">Geladeira</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

@@ -8,7 +8,7 @@ import { serial, text, timestamp, varchar, boolean, numeric, json, date, pgEnum,
 export const roleEnum = pgEnum("role", ["user", "admin"]);
 export const propertyTypeEnum = pgEnum("property_type", ["casa", "apartamento", "cobertura", "terreno", "comercial", "rural", "lancamento"]);
 export const transactionTypeEnum = pgEnum("transaction_type", ["venda", "locacao", "ambos"]);
-export const propertyStatusEnum = pgEnum("property_status", ["disponivel", "reservado", "vendido", "alugado", "inativo"]);
+export const propertyStatusEnum = pgEnum("property_status", ["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]);
 export const leadSourceEnum = pgEnum("lead_source", ["site", "whatsapp", "instagram", "facebook", "indicacao", "portal_zap", "portal_vivareal", "portal_olx", "google", "outro"]);
 export const leadStageEnum = pgEnum("lead_stage", ["novo", "contato_inicial", "qualificado", "visita_agendada", "visita_realizada", "proposta", "negociacao", "fechado_ganho", "fechado_perdido", "sem_interesse"]);
 export const clientTypeEnum = pgEnum("client_type", ["comprador", "locatario", "proprietario"]);
