@@ -43,7 +43,6 @@ RUN npm install -g pnpm@latest && \
 COPY server ./server
 COPY drizzle ./drizzle
 COPY shared ./shared
-COPY storage ./storage
 COPY tsconfig.json ./
 COPY vite.config.ts ./
 
@@ -51,7 +50,7 @@ COPY vite.config.ts ./
 RUN pnpm run build:server
 
 # ============================================
-# STAGE 3: Imagem Final de Produção
+# STAGE 3: Imagem Final de Produção (Stateless)
 # ============================================
 FROM node:22-alpine
 
@@ -74,16 +73,11 @@ RUN pnpm install --prod --frozen-lockfile && \
 COPY --from=client-builder /app/dist/public ./dist/server/public
 COPY --from=server-builder /app/dist/server ./dist/server
 
-# Copiar arquivos necessários
+# Copiar arquivos necessários (schema para drizzle-kit push)
 COPY drizzle ./drizzle
+COPY drizzle.config.ts ./drizzle.config.ts
 COPY shared ./shared
-COPY storage ./storage
-COPY server/_core ./server/_core
 COPY scripts ./scripts
-
-# Criar diretórios necessários
-RUN mkdir -p /app/uploads && \
-    mkdir -p /app/storage/uploads
 
 # Criar usuário não-root para segurança
 RUN addgroup -g 1001 -S nodejs && \
@@ -93,16 +87,16 @@ RUN addgroup -g 1001 -S nodejs && \
 
 USER nodejs
 
-# Expor porta
-EXPOSE 5000
+# Expor porta (Cloud Run usa PORT dinâmico)
+EXPOSE 8080
 
 # Variáveis de ambiente padrão
 ENV NODE_ENV=production \
-    PORT=5000
+    PORT=8080
 
-# Health check
+# Health check para Cloud Run
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8080) + '/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Comando de inicialização com migrations
-CMD ["sh", "-c", "pnpm db:migrate && node dist/server/index.js"]
+# Comando de inicialização com script de produção
+CMD ["sh", "scripts/start-prod.sh"]
