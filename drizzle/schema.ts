@@ -146,7 +146,7 @@ export const interactions = pgTable("interactions", {
 // ============================================
 export const financingSimulations = pgTable("financing_simulations", {
   id: serial("id").primaryKey(),
-  lead_id: integer("lead_id").references(() => leads.id),
+  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   telefone: varchar("telefone", { length: 20 }).notNull(),
@@ -201,7 +201,7 @@ export const rentalPayments = pgTable("rental_payments", {
 export const n8nConversas = pgTable("n8n_conversas", {
   id: serial("id").primaryKey(),
   telefone: varchar("telefone", { length: 20 }).notNull().unique(),
-  lead_id: integer("lead_id").references(() => leads.id),
+  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
   nome: varchar("nome"),
   email: varchar("email"),
   status: varchar("status").default("ativo"),
@@ -247,7 +247,7 @@ export const n8nAutomacoesLog = pgTable("n8n_automacoes_log", {
   workflow_id: varchar("workflow_id").notNull(),
   workflow_name: varchar("workflow_name"),
   execution_id: varchar("execution_id"),
-  lead_id: integer("lead_id").references(() => leads.id),
+  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
   acao: varchar("acao").notNull(),
   resultado: varchar("resultado").notNull(),
   erro: text("erro"),
@@ -260,7 +260,7 @@ export const n8nAutomacoesLog = pgTable("n8n_automacoes_log", {
 // ============================================
 export const n8nLigacoes = pgTable("n8n_ligacoes", {
   id: serial("id").primaryKey(),
-  lead_id: integer("lead_id").references(() => leads.id),
+  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
   telefone: varchar("telefone", { length: 20 }).notNull(),
   retell_call_id: varchar("retell_call_id").unique(),
   duracao: integer("duracao"),
@@ -349,7 +349,7 @@ export const siteSettings = pgTable("site_settings", {
 export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
   property_id: integer("property_id").references(() => properties.id),
-  lead_id: integer("lead_id").references(() => leads.id),
+  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
   client_name: varchar("client_name", { length: 255 }).notNull(),
   client_photo: varchar("client_photo", { length: 500 }),
   rating: integer("rating").notNull(),

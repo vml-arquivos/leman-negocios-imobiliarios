@@ -64,7 +64,11 @@ RUN npm install -g pnpm@latest
 COPY package.json ./
 COPY pnpm-lock.yaml* ./
 COPY patches ./patches
-RUN pnpm install --no-frozen-lockfile
+
+# Instalar dependências de produção e limpar cache
+ENV NODE_ENV=production
+RUN pnpm install --prod --frozen-lockfile && \
+    pnpm store prune
 
 # Copiar builds do frontend e backend
 COPY --from=client-builder /app/dist/public ./dist/server/public
@@ -84,7 +88,8 @@ RUN mkdir -p /app/uploads && \
 # Criar usuário não-root para segurança
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
+    chown -R nodejs:nodejs /app && \
+    chmod +x /app/scripts/*.sh 2>/dev/null || true
 
 USER nodejs
 
@@ -99,5 +104,5 @@ ENV NODE_ENV=production \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Comando de inicialização
-CMD ["node", "dist/server/index.js"]
+# Comando de inicialização com migrations
+CMD ["sh", "-c", "pnpm db:migrate && node dist/server/index.js"]
