@@ -32,6 +32,9 @@ export const users = pgTable("users", {
   active: boolean("active").default(true),
   login_method: varchar("login_method", { length: 50 }).default("local"),
   last_signed_in: timestamp("last_signed_in").defaultNow().notNull(),
+  active: boolean("active").default(true),
+  login_method: varchar("login_method", { length: 50 }).default("local"),
+  last_signed_in: timestamp("last_signed_in").defaultNow().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -152,7 +155,7 @@ export const financingSimulations = pgTable("financing_simulations", {
   lead_id: integer("lead_id").references(() => leads.id),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
+  telefone: varchar("telefone", { length: 20 }).notNull(),
   property_type: varchar("property_type"),
   desired_location: varchar("desired_location"),
   estimated_value: integer("estimated_value"),
