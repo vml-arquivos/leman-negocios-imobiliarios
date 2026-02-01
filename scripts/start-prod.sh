@@ -1,12 +1,12 @@
 #!/bin/sh
 # ============================================
-# Script de Inicialização para Cloud Run + Supabase
+# Script de Inicialização para Produção
 # ============================================
-# Este script sincroniza o schema com Supabase e inicia o servidor
+# Supabase Transaction Pooler - Porta 6543
 
 set -e
 
-echo "🚀 Iniciando Leman Negócios Imobiliários (Cloud Run + Supabase)..."
+echo "🚀 Iniciando Leman Negócios Imobiliários..."
 
 # Verificar variáveis de ambiente obrigatórias
 if [ -z "$DATABASE_URL" ]; then
@@ -15,12 +15,7 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "✅ Variáveis de ambiente validadas"
-
-# Sincronizar schema com Supabase usando drizzle-kit push
-echo "📦 Sincronizando schema com Supabase..."
-npx drizzle-kit push --force
-
-echo "✅ Schema sincronizado com sucesso"
+echo "📦 Conectando ao Supabase via Transaction Pooler (Porta 6543)..."
 
 # Iniciar servidor
 echo "🌐 Iniciando servidor na porta ${PORT:-8080}..."
