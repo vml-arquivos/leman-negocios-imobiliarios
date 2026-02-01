@@ -1,7 +1,7 @@
 import { 
   serial, text, timestamp, varchar, boolean, numeric, 
-  json, date, pgEnum, pgTable, integer 
-} from "drizzle-orm/pg-core";
+  json, jsonb, date, pgEnum, pgTable, integer 
+} from "drizzle-orm/pg-core";)
 
 // ============================================
 // DEFINIÇÃO DE ENUMS (PostgreSQL)
