@@ -13,7 +13,7 @@ const hashPassword = async (password: string): Promise<string> => {
 
 async function seedDatabase() {
   // Conectar ao banco de dados
-  const connectionString = process.env.DATABASE_URL || "postgresql://leman_user:leman_secure_password_2026@localhost:5432/leman_imoveis";
+  const connectionString = process.env.DATABASE_URL || "postgresql://leman_user:leman_secure_password_2026@localhost:6543/leman_imoveis";
   const connection = postgres(connectionString);
   const db = drizzle(connection, { schema });
 

@@ -6,7 +6,7 @@
 import postgres from "postgres";
 import { hashPassword } from "../server/auth";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://leman_user:leman_secure_password_2026@localhost:5432/leman_imoveis";
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://leman_user:leman_secure_password_2026@localhost:6543/leman_imoveis";
 
 async function seedDatabase() {
   console.log("🌱 Iniciando seed de dados - Leman Negócios Imobiliários\n");

@@ -1,105 +1,40 @@
+version: '3.8'
+
 services:
   # ============================================
-  # APLICAÇÃO NODE.JS - LEMAN NEGÓCIOS IMOBILIÁRIOS
+  # APLICAÇÃO LEMAN NEGÓCIOS IMOBILIÁRIOS
+  # ============================================
+  # Sistema usa Supabase (PostgreSQL externo - porta 6543)
+  # NÃO usa PostgreSQL local nem Redis
   # ============================================
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: leman-app
-    restart: always
+    restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5000:8080"
     env_file:
       - .env.production
     environment:
-      - NODE_ENV=production
-      - PORT=5000
+      # Sobrescrever PORT para Docker
+      - PORT=8080
+      - HOST=0.0.0.0
     volumes:
-      - ./uploads:/app/uploads
-      - ./storage:/app/storage
+      # Logs persistentes (opcional)
+      - ./logs:/app/logs
     networks:
       - leman-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # ============================================
-  # NGINX REVERSE PROXY
-  # ============================================
-  nginx:
-    image: nginx:alpine
-    container_name: leman-nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - app
-    networks:
-      - leman-network
-
-  # ============================================
-  # POSTGRESQL DATABASE
-  # ============================================
-  postgres:
-    image: postgres:15-alpine
-    container_name: leman-postgres
-    restart: always
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=leman_db
-      - POSTGRES_USER=leman_user
-      - POSTGRES_PASSWORD=leman_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - leman-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U leman_user -d leman_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ============================================
-  # REDIS (Cache - Opcional)
-  # ============================================
-  redis:
-    image: redis:7-alpine
-    container_name: leman-redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - leman-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-# ============================================
-# VOLUMES PERSISTENTES
-# ============================================
-volumes:
-  redis_data:
-    driver: local
-  postgres_data:
-    driver: local
+    labels:
+      - "com.leman.app=main"
+      - "com.leman.version=1.0.0"
 
 # ============================================
 # REDE DOCKER
@@ -107,3 +42,16 @@ volumes:
 networks:
   leman-network:
     driver: bridge
+    name: leman-network
+
+# ============================================
+# NOTAS IMPORTANTES
+# ============================================
+# 1. PostgreSQL REMOVIDO - Sistema usa Supabase (porta 6543)
+# 2. Redis REMOVIDO - Não é necessário
+# 3. Nginx REMOVIDO - Será instalado diretamente na VPS
+# 4. Volumes locais REMOVIDOS - Sistema é stateless
+# 5. Porta interna: 8080 (container)
+#    Porta externa: 5000 (VPS)
+#    Nginx fará proxy de 80/443 → 5000
+# ============================================
