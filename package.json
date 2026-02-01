@@ -7,7 +7,7 @@
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
     "build": "pnpm run build:client && pnpm run build:server",
     "build:client": "vite build",
-    "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/server",
+    "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --external:*.config.* --external:vite --outdir=dist/server",
     "start": "NODE_ENV=production node dist/server/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
