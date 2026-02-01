@@ -37,7 +37,12 @@ function ensureClient() {
     throw new Error("DATABASE_URL não definido (variável de ambiente).");
   }
 
-  _client = postgres(url, {
+  // Adicionar parâmetro pgbouncer=true se usando Supabase Transaction Pooler (porta 6543)
+  const connectionUrl = url.includes('6543') && !url.includes('pgbouncer=true') 
+    ? `${url}${url.includes('?') ? '&' : '?'}pgbouncer=true` 
+    : url;
+
+  _client = postgres(connectionUrl, {
     max: 20,
     idle_timeout: 30,
     connect_timeout: 10,

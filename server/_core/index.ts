@@ -6,7 +6,6 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import authRouter from "../auth-simple";
-import { serveStatic, setupVite } from "./vite";
 
 async function startServer() {
   const app = express();
@@ -36,10 +35,14 @@ async function startServer() {
     })
   );
   
-  // development mode uses Vite, production mode uses static files
+  // Development mode uses Vite with dynamic import, production mode uses static files
   if (process.env.NODE_ENV === "development") {
+    // Dynamic import to avoid loading Vite in production bundle
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
+    // Dynamic import for production static file serving
+    const { serveStatic } = await import("./vite");
     serveStatic(app);
   }
 
