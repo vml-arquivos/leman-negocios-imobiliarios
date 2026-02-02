@@ -166,6 +166,14 @@ const authRouter = router({
 // ============================================
 
 const usersRouter = router({
+  list: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== 'admin' && ctx.user.role !== 'gerente') {
+        throw new Error('Apenas administradores e gerentes podem listar usuários');
+      }
+      return await db.db.listUsers();
+    }),
+
   create: protectedProcedure
     .input(z.object({
       name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),

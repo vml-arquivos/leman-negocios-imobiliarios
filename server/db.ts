@@ -104,6 +104,18 @@ export const db = {
       .where(eq(users.id, userId));
   },
 
+  listUsers: async (): Promise<User[]> => {
+    const database = await getDb();
+    if (!database) return [];
+
+    const result = await database
+      .select()
+      .from(users)
+      .orderBy(desc(users.createdAt));
+
+    return result;
+  },
+
   getUserById: async (id: number): Promise<User | null> => {
     const database = await getDb();
     if (!database) return null;
