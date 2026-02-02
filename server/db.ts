@@ -100,7 +100,7 @@ export const db = {
     
     await database
       .update(users)
-      .set({ lastSignedIn: new Date() })
+      .set({ last_signed_in: new Date() })
       .where(eq(users.id, userId));
   },
 
