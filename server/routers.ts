@@ -162,6 +162,57 @@ const authRouter = router({
 });
 
 // ============================================
+// USERS ROUTER
+// ============================================
+
+const usersRouter = router({
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
+      email: z.string().email("Email inválido"),
+      password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+      role: z.enum(["admin", "gerente", "corretor", "atendente", "user"]).default("user"),
+      phone: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem criar usuários');
+      }
+
+      const { hashPassword } = await import("./auth");
+
+      // Verificar se email já existe
+      const existingUser = await db.db.getUserByEmail(input.email);
+      if (existingUser) {
+        throw new Error("Email já cadastrado");
+      }
+
+      // Hash da senha
+      const hashedPassword = await hashPassword(input.password);
+
+      // Criar usuário
+      const user = await db.db.createUser({
+        name: input.name,
+        email: input.email,
+        password: hashedPassword,
+        loginMethod: "local",
+        role: input.role,
+        phone: input.phone,
+      });
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      };
+    }),
+});
+
+// ============================================
 // PROPERTIES ROUTER
 // ============================================
 
@@ -2434,6 +2485,7 @@ const clientsRouter = router({
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
+  users: usersRouter,
   properties: propertiesRouter,
   propertyImages: propertyImagesRouter,
   leads: leadsRouter,
