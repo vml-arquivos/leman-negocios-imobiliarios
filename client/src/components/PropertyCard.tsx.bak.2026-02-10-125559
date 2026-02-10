@@ -41,7 +41,6 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
-  const displayPrice = (property as any)?.sale_price ?? (property as any)?.price ?? 0;
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { addProperty, removeProperty, isSelected, canAddMore } = useCompare();
@@ -74,7 +73,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     e.preventDefault();
     e.stopPropagation();
     const message = encodeURIComponent(
-      `Olá! Tenho interesse no imóvel: ${property.title}\n\nPreço: ${formatPrice(displayPrice)}\nLocalização: ${property.neighborhood}, ${property.city}\n\nGostaria de mais informações.`
+      `Olá! Tenho interesse no imóvel: ${property.title}\n\nPreço: ${formatPrice(property.price)}\nLocalização: ${property.neighborhood}, ${property.city}\n\nGostaria de mais informações.`
     );
     window.open(`https://wa.me/5561998687245?text=${message}`, "_blank");
   };
@@ -181,14 +180,14 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         {/* Price */}
         <div className="mb-3">
           <p className="text-2xl font-bold text-[#1a1f3c]">
-            {formatPrice(displayPrice)}
+            {formatPrice(property.price)}
             {property.transactionType === "aluguel" && (
               <span className="text-sm text-gray-500 font-normal">/mês</span>
             )}
           </p>
-          {property.transactionType === "venda" && displayPrice > 100000000 && (
+          {property.transactionType === "venda" && property.price > 100000000 && (
             <p className="text-xs text-gray-500 mt-1">
-              Parcelas a partir de {formatPrice(displayPrice / 360)}/mês*
+              Parcelas a partir de {formatPrice(property.price / 360)}/mês*
             </p>
           )}
         </div>

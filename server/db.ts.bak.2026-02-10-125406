@@ -31,7 +31,6 @@ function ensureClient() {
     : url;
 
   _client = postgres(connectionUrl, {
-    prepare: false,
     max: 20,
     idle_timeout: 30,
     connect_timeout: 10,
@@ -238,10 +237,10 @@ export async function listProperties(params: {
     conditions.push(eq(properties.neighborhood, params.neighborhood));
   }
   if (params.minPrice) {
-    conditions.push(gte(properties.sale_price, params.minPrice));
+    conditions.push(gte(properties.price, params.minPrice));
   }
   if (params.maxPrice) {
-    conditions.push(lte(properties.sale_price, params.maxPrice));
+    conditions.push(lte(properties.price, params.maxPrice));
   }
   if (params.minArea) {
     conditions.push(gte(properties.area, params.minArea));

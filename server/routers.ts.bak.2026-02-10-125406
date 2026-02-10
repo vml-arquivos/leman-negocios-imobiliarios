@@ -251,7 +251,7 @@ const propertiesRouter = router({
     }).optional())
     .query(async ({ input }) => {
       const result = await db.listProperties({ limit: input?.limit || 6 });
-      return result.items.filter((p: any) => p.featured);
+      return result.items.filter((p: any) => p.is_featured);
     }),
 
   // Obter um imóvel por ID (público)
@@ -278,8 +278,8 @@ const propertiesRouter = router({
       zipCode: z.string().optional(),
       latitude: z.string().optional(),
       longitude: z.string().optional(),
-      sale_price: z.number().optional(),
-      rent_price: z.number().optional(),
+      price: z.number().optional(),
+      rental_price: z.number().optional(),
       condoFee: z.number().optional(),
       iptu: z.number().optional(),
       bedrooms: z.number().optional(),
@@ -292,7 +292,7 @@ const propertiesRouter = router({
       images: z.string().optional(),
       mainImage: z.string().optional(),
       status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]).optional(),
-      featured: z.boolean().optional(),
+      is_featured: z.boolean().optional(),
       published: z.boolean().optional(),
       metaTitle: z.string().optional(),
       metaDescription: z.string().optional(),
@@ -325,8 +325,8 @@ const propertiesRouter = router({
         zipCode: z.string().optional(),
         latitude: z.string().optional(),
         longitude: z.string().optional(),
-        sale_price: z.number().optional(),
-        rent_price: z.number().optional(),
+        price: z.number().optional(),
+        rental_price: z.number().optional(),
         condoFee: z.number().optional(),
         iptu: z.number().optional(),
         bedrooms: z.number().optional(),
@@ -339,7 +339,7 @@ const propertiesRouter = router({
         images: z.string().optional(),
         mainImage: z.string().optional(),
         status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]).optional(),
-        featured: z.boolean().optional(),
+        is_featured: z.boolean().optional(),
         published: z.boolean().optional(),
         metaTitle: z.string().optional(),
         metaDescription: z.string().optional(),
@@ -1109,11 +1109,11 @@ const integrationRouter = router({
             description: p.description,
             propertyType: p.propertyType,
             transactionType: p.transactionType,
-            price: p.sale_price,
-            rental_price: p.rent_price,
+            price: p.price,
+            rental_price: p.rental_price,
             bedrooms: p.bedrooms,
             bathrooms: p.bathrooms,
-            totalArea: p.area,
+            totalArea: p.totalArea,
             address: p.address,
             neighborhood: p.neighborhood,
             city: p.city,
@@ -1902,7 +1902,7 @@ const reviewsRouter = router({
       propertyId: z.number().optional(),
       leadId: z.number().optional(),
       approved: z.boolean().optional(),
-      featured: z.boolean().optional(),
+      is_featured: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'admin') {
