@@ -69,7 +69,7 @@ const authRouter = router({
         maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano
       });
       
-      // Atualizar lastSignedIn
+      // Atualizar last_signed_in
       await db.db.updateUserLastSignIn(user.id);
       
       console.log("[Auth] Login bem-sucedido:", input.email);
@@ -550,26 +550,26 @@ const leadsRouter = router({
         
         if (interactions.length === 0) {
           // Sem interações, verificar data de criação
-          const createdDate = new Date(lead.createdAt);
+          const createdDate = new Date(lead.created_at);
           if (createdDate < threeDaysAgo) {
             inactiveLeads.push({
               ...lead,
               daysSinceLastContact: Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)),
-              lastContactDate: lead.createdAt,
+              lastContactDate: lead.created_at,
             });
           }
         } else {
           // Com interações, verificar a mais recente
           const lastInteraction = interactions.sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )[0];
-          const lastContactDate = new Date(lastInteraction.createdAt);
+          const lastContactDate = new Date(lastInteraction.created_at);
           
           if (lastContactDate < threeDaysAgo) {
             inactiveLeads.push({
               ...lead,
               daysSinceLastContact: Math.floor((Date.now() - lastContactDate.getTime()) / (1000 * 60 * 60 * 24)),
-              lastContactDate: lastInteraction.createdAt,
+              lastContactDate: lastInteraction.created_at,
             });
           }
         }
@@ -1317,7 +1317,7 @@ const analyticsRouter = router({
       
       await db.insert(analyticsEvents).values({
         ...input,
-        createdAt: new Date(),
+        created_at: new Date(),
       });
       
       return { success: true };
@@ -1371,7 +1371,7 @@ const analyticsRouter = router({
       const db = await getDb();
       if (!db) return [];
       
-      return db.select().from(campaignSources).orderBy(desc(campaignSources.createdAt));
+      return db.select().from(campaignSources).orderBy(desc(campaignSources.created_at));
     }),
 
   // Criar campanha (protegido - admin)
@@ -1407,8 +1407,8 @@ const analyticsRouter = router({
         impressions: 0,
         conversions: 0,
         active: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       });
       
       return { success: true };
@@ -1439,7 +1439,7 @@ const financialRouter = router({
       // Filtros opcionais
       // TODO: Implementar filtros quando necessário
       
-      return query.orderBy(desc(transactions.createdAt));
+      return query.orderBy(desc(transactions.created_at));
     }),
 
   // Criar transação (protegido - admin)
@@ -1471,8 +1471,8 @@ const financialRouter = router({
         paymentDate: input.paymentDate ? new Date(input.paymentDate) : undefined,
         dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
         currency: 'BRL',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       });
       
       return { success: true };
@@ -1488,7 +1488,7 @@ const financialRouter = router({
       const db = await getDb();
       if (!db) return [];
       
-      return db.select().from(commissions).orderBy(desc(commissions.createdAt));
+      return db.select().from(commissions).orderBy(desc(commissions.created_at));
     }),
 
   // Criar comissão (protegido - admin)
@@ -1516,8 +1516,8 @@ const financialRouter = router({
       
       await db.insert(commissions).values({
         ...input,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       });
       
       return { success: true };
@@ -1609,7 +1609,7 @@ const financialRouter = router({
       
       return db.select()
         .from(transactions)
-        .orderBy(desc(transactions.createdAt))
+        .orderBy(desc(transactions.created_at))
         .limit(input.limit);
     }),
 
@@ -1638,7 +1638,7 @@ const financialRouter = router({
       if (!db) return { items: [], summary: {} };
       
       // Buscar todas as transações
-      let allTransactions = await db.select().from(transactions).orderBy(desc(transactions.createdAt));
+      let allTransactions = await db.select().from(transactions).orderBy(desc(transactions.created_at));
       
       // Aplicar filtros
       if (input.ownerId) {
@@ -1658,11 +1658,11 @@ const financialRouter = router({
       }
       if (input.startDate) {
         const startDate = new Date(input.startDate);
-        allTransactions = allTransactions.filter(t => new Date(t.createdAt) >= startDate);
+        allTransactions = allTransactions.filter(t => new Date(t.created_at) >= startDate);
       }
       if (input.endDate) {
         const endDate = new Date(input.endDate);
-        allTransactions = allTransactions.filter(t => new Date(t.createdAt) <= endDate);
+        allTransactions = allTransactions.filter(t => new Date(t.created_at) <= endDate);
       }
       
       // Calcular resumo
@@ -1874,7 +1874,7 @@ const reviewsRouter = router({
       return db.select()
         .from(reviews)
         .where(eq(reviews.approved, true))
-        .orderBy(desc(reviews.featured), desc(reviews.displayOrder), desc(reviews.createdAt));
+        .orderBy(desc(reviews.featured), desc(reviews.displayOrder), desc(reviews.created_at));
     }),
 
   // Listar todas as avaliações (protegido - admin)
@@ -1887,7 +1887,7 @@ const reviewsRouter = router({
       const db = await getDb();
       if (!db) return [];
       
-      return db.select().from(reviews).orderBy(desc(reviews.createdAt));
+      return db.select().from(reviews).orderBy(desc(reviews.created_at));
     }),
 
   // Criar avaliação (protegido - admin)
@@ -1917,8 +1917,8 @@ const reviewsRouter = router({
         approved: input.approved ?? false,
         featured: input.featured ?? false,
         displayOrder: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       });
       
       return { success: true };
@@ -1938,7 +1938,7 @@ const reviewsRouter = router({
       if (!db) throw new Error("Database not available");
       
       await db.update(reviews)
-        .set({ approved: true, updatedAt: new Date() })
+        .set({ approved: true, updated_at: new Date() })
         .where(eq(reviews.id, input.id));
       
       return { success: true };
@@ -2017,7 +2017,7 @@ const financingRouter = router({
             stage: "warm",
             source: "Simulador de Financiamento",
             notes: `Simulação de financiamento: ${input.selectedBank} - ${input.amortizationSystem}`,
-            updatedAt: new Date(),
+            updated_at: new Date(),
           })
           .where(eq(leads.id, leadId));
       } else {
@@ -2094,7 +2094,7 @@ const financingRouter = router({
       
       const simulations = await db.select()
         .from(financingSimulations)
-        .orderBy(desc(financingSimulations.createdAt))
+        .orderBy(desc(financingSimulations.created_at))
         .limit(100);
       
       return simulations;
@@ -2135,7 +2135,7 @@ const financingRouter = router({
       if (!db) throw new Error("Database not available");
       
       await db.update(financingSimulations)
-        .set({ contacted: true, status: "contacted", updatedAt: new Date() })
+        .set({ contacted: true, status: "contacted", updated_at: new Date() })
         .where(eq(financingSimulations.id, input.id));
       
       return { success: true };
