@@ -62,10 +62,10 @@ interface UnifiedClient {
   name: string;
   email: string | null;
   phone: string | null;
-  clientType: string;
+  interest_type: string;
   source: string;
   status: string;
-  qualification: string | null;
+  stage: string | null;
   score: number | null;
   lastInteraction: Date | null;
   createdAt: Date;
@@ -349,7 +349,7 @@ export default function ClientsManagement() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{getClientTypeBadge(client.clientType)}</TableCell>
+                        <TableCell>{getClientTypeBadge(client.interest_type)}</TableCell>
                         <TableCell>{getSourceBadge(client.source)}</TableCell>
                         <TableCell>{getStatusBadge(client.status)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -397,7 +397,7 @@ export default function ClientsManagement() {
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold">{selectedClient.name}</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {getClientTypeBadge(selectedClient.clientType)}
+                    {getClientTypeBadge(selectedClient.interest_type)}
                     {getSourceBadge(selectedClient.source)}
                   </div>
                 </div>

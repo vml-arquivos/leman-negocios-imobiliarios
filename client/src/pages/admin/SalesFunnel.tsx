@@ -31,7 +31,7 @@ interface Lead {
   phone: string | null;
   whatsapp: string | null;
   stage: string;
-  qualification: string | null;
+  stage: string | null;
   budgetMin: number | null;
   budgetMax: number | null;
   score: number | null;
@@ -81,7 +81,7 @@ export default function SalesFunnel() {
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesQualification =
-      qualificationFilter === "all" || lead.qualification === qualificationFilter;
+      qualificationFilter === "all" || lead.stage === qualificationFilter;
     const matchesPriority =
       priorityFilter === "all" || lead.priority === priorityFilter;
     return matchesSearch && matchesQualification && matchesPriority;

@@ -52,8 +52,8 @@ export default function LeadEdit() {
     email: "",
     phone: "",
     whatsapp: "",
-    clientType: "comprador" as "comprador" | "locatario" | "proprietario",
-    qualification: "nao_qualificado" as "quente" | "morno" | "frio" | "nao_qualificado",
+    interest_type: "comprador" as "comprador" | "locatario" | "proprietario",
+    stage: "nao_qualificado" as "quente" | "morno" | "frio" | "nao_qualificado",
     stage: "novo" as string,
     source: "site" as string,
     transactionInterest: "venda" as "venda" | "locacao" | "ambos",
@@ -74,8 +74,8 @@ export default function LeadEdit() {
         email: lead.email || "",
         phone: lead.phone || "",
         whatsapp: lead.whatsapp || "",
-        clientType: lead.clientType || "comprador",
-        qualification: lead.qualification || "nao_qualificado",
+        interest_type: lead.interest_type || "comprador",
+        stage: lead.stage || "nao_qualificado",
         stage: lead.stage || "novo",
         source: lead.source || "site",
         transactionInterest: lead.transactionInterest || "venda",
@@ -99,8 +99,8 @@ export default function LeadEdit() {
       email: formData.email || undefined,
       phone: formData.phone || undefined,
       whatsapp: formData.whatsapp || undefined,
-      clientType: formData.clientType,
-      qualification: formData.qualification,
+      interest_type: formData.interest_type,
+      stage: formData.stage,
       stage: formData.stage as any,
       source: formData.source as any,
       transactionInterest: formData.transactionInterest,
@@ -154,7 +154,7 @@ export default function LeadEdit() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm">
-                      {formData.qualification === 'quente' && (
+                      {formData.stage === 'quente' && (
                         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                           <p className="font-semibold text-red-700">🔥 Cliente QUENTE - Prioridade Máxima!</p>
                           <ul className="mt-2 space-y-1 text-red-600">
@@ -165,7 +165,7 @@ export default function LeadEdit() {
                           </ul>
                         </div>
                       )}
-                      {formData.qualification === 'morno' && (
+                      {formData.stage === 'morno' && (
                         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <p className="font-semibold text-yellow-700">🌡️ Cliente MORNO - Nutrir Relacionamento</p>
                           <ul className="mt-2 space-y-1 text-yellow-600">
@@ -176,7 +176,7 @@ export default function LeadEdit() {
                           </ul>
                         </div>
                       )}
-                      {formData.qualification === 'frio' && (
+                      {formData.stage === 'frio' && (
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <p className="font-semibold text-blue-700">❄️ Cliente FRIO - Manter no Radar</p>
                           <ul className="mt-2 space-y-1 text-blue-600">
@@ -263,10 +263,10 @@ export default function LeadEdit() {
                 <h3 className="text-lg font-semibold">Perfil do Cliente</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="clientType">Tipo de Cliente *</Label>
+                    <Label htmlFor="interest_type">Tipo de Cliente *</Label>
                     <Select
-                      value={formData.clientType}
-                      onValueChange={(value: any) => setFormData({ ...formData, clientType: value })}
+                      value={formData.interest_type}
+                      onValueChange={(value: any) => setFormData({ ...formData, interest_type: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -280,10 +280,10 @@ export default function LeadEdit() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="qualification">Qualificação *</Label>
+                    <Label htmlFor="stage">Qualificação *</Label>
                     <Select
-                      value={formData.qualification}
-                      onValueChange={(value: any) => setFormData({ ...formData, qualification: value })}
+                      value={formData.stage}
+                      onValueChange={(value: any) => setFormData({ ...formData, stage: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />

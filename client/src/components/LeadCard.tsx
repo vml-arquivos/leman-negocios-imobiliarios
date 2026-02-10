@@ -26,7 +26,7 @@ interface Lead {
   phone: string | null;
   whatsapp: string | null;
   stage: string;
-  qualification: string | null;
+  stage: string | null;
   budgetMin: number | null;
   budgetMax: number | null;
   score: number | null;
@@ -80,7 +80,7 @@ export function LeadCard({ lead, onEdit, onDelete }: LeadCardProps) {
   };
 
   const qualificationColor =
-    qualificationColors[lead.qualification as keyof typeof qualificationColors] ||
+    qualificationColors[lead.stage as keyof typeof qualificationColors] ||
     "bg-gray-500/10 text-gray-700 border-gray-200";
 
   const priorityColor =
@@ -95,9 +95,9 @@ export function LeadCard({ lead, onEdit, onDelete }: LeadCardProps) {
       style={{
         ...style,
         borderLeftColor:
-          lead.qualification === "hot"
+          lead.stage === "hot"
             ? "#ef4444"
-            : lead.qualification === "warm"
+            : lead.stage === "warm"
             ? "#f97316"
             : "#3b82f6",
       }}
@@ -106,12 +106,12 @@ export function LeadCard({ lead, onEdit, onDelete }: LeadCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900 mb-1">{lead.name}</h3>
-          {lead.qualification && (
+          {lead.stage && (
             <Badge
               variant="outline"
               className={`text-xs ${qualificationColor}`}
             >
-              {lead.qualification.toUpperCase()}
+              {lead.stage.toUpperCase()}
             </Badge>
           )}
         </div>

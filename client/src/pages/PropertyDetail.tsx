@@ -53,7 +53,7 @@ export default function PropertyDetail() {
   });
 
   const images = (Array.isArray(property?.images) ? property.images : []) as string[];
-  const allImages = property?.mainImage ? [property.mainImage, ...images] : images;
+  const allImages = property?.coverImage ? [property.coverImage, ...images] : images;
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
@@ -130,7 +130,7 @@ export default function PropertyDetail() {
   // SEO Meta Tags
   const seoTitle = `${property.title} - Leman Negócios Imobiliários`;
   const seoDescription = property?.description?.substring(0, 160) || `${property?.type || 'Imóvel'} para ${property?.transactionType} em ${property?.neighborhood}, ${property?.city}. ${price}.`;
-  const seoImage = property.mainImage || allImages[0] || 'https://placehold.co/1200x630';
+  const seoImage = property.coverImage || allImages[0] || 'https://placehold.co/1200x630';
   const seoUrl = `https://leman.com/imovel/${property?.id}`;
 
   return (

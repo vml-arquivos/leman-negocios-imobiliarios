@@ -59,7 +59,7 @@ export default function Properties() {
         bathrooms: p.bathrooms || 0,
         area: Number(p.totalArea || 0),
         garageSpaces: p.parkingSpaces || 0,
-        images: p.mainImage ? [p.mainImage] : [],
+        images: p.coverImage ? [p.coverImage] : [],
         featured: false,
         createdAt: p.createdAt || new Date(),
       }))

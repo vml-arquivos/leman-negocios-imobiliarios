@@ -78,7 +78,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     window.open(`https://wa.me/5561998687245?text=${message}`, "_blank");
   };
 
-  const mainImage = property.images[0] || "/imoveis/sala-moderna-1.jpg";
+  const coverImage = property.images[0] || "/imoveis/sala-moderna-1.jpg";
 
   return (
     <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white rounded-xl">
@@ -86,7 +86,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       <Link href={`/imoveis/${property.id}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-[#1a1f3c]">
           <img
-            src={imageError ? "/imoveis/sala-moderna-1.jpg" : mainImage}
+            src={imageError ? "/imoveis/sala-moderna-1.jpg" : coverImage}
             alt={property.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             onError={() => setImageError(true)}

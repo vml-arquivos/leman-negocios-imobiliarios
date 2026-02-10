@@ -43,7 +43,7 @@ function FeaturedProperties() {
                 <Card className="overflow-hidden group hover:shadow-2xl transition-shadow duration-300 cursor-pointer">
                 <div className="relative h-64 bg-muted overflow-hidden">
                   {(() => {
-                    const imageUrl = property.mainImage || (property.images ? JSON.parse(property.images)[0]?.url : null);
+                    const imageUrl = property.images || (property.images ? JSON.parse(property.images)[0]?.url : null);
                     return imageUrl ? (
                       <img 
                         src={imageUrl} 
@@ -58,10 +58,10 @@ function FeaturedProperties() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-4 left-4 text-white">
                     <span className="text-2xl font-bold">
-                      {property.salePrice
-                        ? formatCurrency(property.salePrice)
-                        : property.rentPrice
-                        ? formatRent(property.rentPrice)
+                      {property.price
+                        ? formatCurrency(property.price)
+                        : property.rental_price
+                        ? formatRent(property.rental_price)
                         : 'Consulte'}
                     </span>
                   </div>
@@ -148,7 +148,7 @@ function AllProperties() {
               <Card className="overflow-hidden group hover:shadow-2xl transition-shadow duration-300 cursor-pointer">
               <div className="relative h-64 bg-muted overflow-hidden">
                 {(() => {
-                  const imageUrl = property.mainImage || (property.images ? JSON.parse(property.images)[0]?.url : null);
+                  const imageUrl = property.images || (property.images ? JSON.parse(property.images)[0]?.url : null);
                   return imageUrl ? (
                     <img 
                       src={imageUrl} 
@@ -163,10 +163,10 @@ function AllProperties() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
                   <span className="text-2xl font-bold">
-                    {property.salePrice
-                      ? formatCurrency(property.salePrice)
-                      : property.rentPrice
-                      ? formatRent(property.rentPrice)
+                    {property.price
+                      ? formatCurrency(property.price)
+                      : property.rental_price
+                      ? formatRent(property.rental_price)
                       : 'Consulte'}
                   </span>
                 </div>

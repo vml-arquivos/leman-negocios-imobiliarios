@@ -42,3 +42,8 @@ temp/
 # OS
 Thumbs.db
 .DS_Store
+.migration_logs/
+**/*.backup
+**/*.bak
+**/*.tmp
+**/*.disabled

@@ -207,7 +207,7 @@ export default function FollowUp() {
                             {lead.name}
                           </button>
                           <div className="text-xs text-muted-foreground capitalize">
-                            {lead.clientType}
+                            {lead.interest_type}
                           </div>
                         </TableCell>
                         <TableCell>

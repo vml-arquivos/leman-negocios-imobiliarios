@@ -29,18 +29,18 @@ export default function Dashboard() {
   const totalProperties = properties?.length || 0;
   const totalLeads = leads?.length || 0;
   const activeProperties = properties?.filter(p => p.status === 'disponivel').length || 0;
-  const hotLeads = leads?.filter(l => l.qualification === 'quente').length || 0;
+  const hotLeads = leads?.filter(l => l.stage === 'quente').length || 0;
 
   // Análise por tipo de cliente
   const leadsByClientType = leads?.reduce((acc, lead) => {
-    const type = lead.clientType || 'comprador';
+    const type = lead.interest_type || 'comprador';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
 
   // Análise por qualificação
   const leadsByQualification = leads?.reduce((acc, lead) => {
-    const qual = lead.qualification || 'nao_qualificado';
+    const qual = lead.stage || 'nao_qualificado';
     acc[qual] = (acc[qual] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
@@ -64,7 +64,7 @@ export default function Dashboard() {
   // Valor total de imóveis disponíveis
   const totalPropertyValue = properties
     ?.filter(p => p.status === 'disponivel')
-    .reduce((sum, p) => sum + (p.salePrice || 0), 0) || 0;
+    .reduce((sum, p) => sum + (p.price || 0), 0) || 0;
 
   // Configurações de visualização
   const clientTypeConfig = {
@@ -356,9 +356,9 @@ export default function Dashboard() {
         <CardContent>
           <div className="space-y-4">
             {recentLeads.map((lead) => {
-              const qualConfig = qualificationConfig[lead.qualification as keyof typeof qualificationConfig];
+              const qualConfig = qualificationConfig[lead.stage as keyof typeof qualificationConfig];
               const QualIcon = qualConfig?.icon || Activity;
-              const clientConfig = clientTypeConfig[lead.clientType as keyof typeof clientTypeConfig];
+              const clientConfig = clientTypeConfig[lead.interest_type as keyof typeof clientTypeConfig];
               
               return (
                 <div key={lead.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
@@ -373,10 +373,10 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-xs px-2 py-1 rounded bg-muted">
-                      {clientConfig?.label || lead.clientType}
+                      {clientConfig?.label || lead.interest_type}
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium">{qualConfig?.label || lead.qualification}</div>
+                      <div className="text-sm font-medium">{qualConfig?.label || lead.stage}</div>
                       <div className="text-xs text-muted-foreground">{stageLabels[lead.stage]}</div>
                     </div>
                   </div>

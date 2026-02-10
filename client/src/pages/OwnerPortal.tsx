@@ -10,7 +10,7 @@ interface OwnerProperty {
   address: string;
   rentPrice: number;
   status: string;
-  mainImage: string;
+  coverImage: string;
 }
 
 interface OwnerTransaction {
@@ -133,9 +133,9 @@ const OwnerPortal: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
               {properties.map((property) => (
                 <div key={property.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition">
-                  {property.mainImage && (
+                  {property.coverImage && (
                     <img
-                      src={property.mainImage}
+                      src={property.coverImage}
                       alt={property.title}
                       className="w-full h-48 object-cover"
                     />

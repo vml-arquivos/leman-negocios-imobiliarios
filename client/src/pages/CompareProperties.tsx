@@ -207,7 +207,7 @@ export default function CompareProperties() {
                     </Button>
                     <div className="aspect-[4/3] overflow-hidden rounded-lg mb-3">
                       <img
-                        src={property.mainImage || "/placeholder-property.jpg"}
+                        src={property.coverImage || "/placeholder-property.jpg"}
                         alt={property.title}
                         className="w-full h-full object-cover"
                       />

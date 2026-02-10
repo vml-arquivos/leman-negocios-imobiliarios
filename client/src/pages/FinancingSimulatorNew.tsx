@@ -9,6 +9,7 @@ import { Calculator, Building2, DollarSign, Calendar, TrendingUp, CheckCircle2, 
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import Header from "@/components/Header";
+import FinancingComparator from "./FinancingComparator";
 import Footer from "@/components/Footer";
 
 // Taxas de juros anuais dos principais bancos (2026)
@@ -503,6 +504,11 @@ export default function FinancingSimulatorNew() {
             )}
           </div>
         )}
+      </div>
+
+      {/* LEMAN__FINANCING_COMPARATOR__EMBED */}
+      <div className="mt-8">
+        <FinancingComparator />
       </div>
 
       <Footer />

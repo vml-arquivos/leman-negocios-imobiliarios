@@ -5,10 +5,10 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { webhooksRouter } from "./routers/webhooks";
 import { z } from "zod";
 import * as db from "./db";
-// import * as rentalMgmt from "./rental-management"; // DISABLED
+// [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
 import { eq, desc, gte, sql } from "drizzle-orm";
-import { analyticsEvents, campaignSources, reviews, financingSimulations, leads, rentalPayments, properties, interactions } from "../drizzle/schema";
+import { financingSimulations, leads, rentalPayments, properties, landlords, tenants } from "../drizzle/schema";
 
 // ============================================
 // AUTH ROUTER
@@ -251,7 +251,7 @@ const propertiesRouter = router({
     }).optional())
     .query(async ({ input }) => {
       const result = await db.listProperties({ limit: input?.limit || 6 });
-      return result.items.filter((p: any) => p.featured);
+      return result.items.filter((p: any) => p.is_featured);
     }),
 
   // Obter um imóvel por ID (público)
@@ -278,8 +278,8 @@ const propertiesRouter = router({
       zipCode: z.string().optional(),
       latitude: z.string().optional(),
       longitude: z.string().optional(),
-      salePrice: z.number().optional(),
-      rentPrice: z.number().optional(),
+      price: z.number().optional(),
+      rental_price: z.number().optional(),
       condoFee: z.number().optional(),
       iptu: z.number().optional(),
       bedrooms: z.number().optional(),
@@ -292,7 +292,7 @@ const propertiesRouter = router({
       images: z.string().optional(),
       mainImage: z.string().optional(),
       status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]).optional(),
-      featured: z.boolean().optional(),
+      is_featured: z.boolean().optional(),
       published: z.boolean().optional(),
       metaTitle: z.string().optional(),
       metaDescription: z.string().optional(),
@@ -325,8 +325,8 @@ const propertiesRouter = router({
         zipCode: z.string().optional(),
         latitude: z.string().optional(),
         longitude: z.string().optional(),
-        salePrice: z.number().optional(),
-        rentPrice: z.number().optional(),
+        price: z.number().optional(),
+        rental_price: z.number().optional(),
         condoFee: z.number().optional(),
         iptu: z.number().optional(),
         bedrooms: z.number().optional(),
@@ -339,7 +339,7 @@ const propertiesRouter = router({
         images: z.string().optional(),
         mainImage: z.string().optional(),
         status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]).optional(),
-        featured: z.boolean().optional(),
+        is_featured: z.boolean().optional(),
         published: z.boolean().optional(),
         metaTitle: z.string().optional(),
         metaDescription: z.string().optional(),
@@ -1109,8 +1109,8 @@ const integrationRouter = router({
             description: p.description,
             propertyType: p.propertyType,
             transactionType: p.transactionType,
-            salePrice: p.salePrice,
-            rentPrice: p.rentPrice,
+            price: p.price,
+            rental_price: p.rental_price,
             bedrooms: p.bedrooms,
             bathrooms: p.bathrooms,
             totalArea: p.totalArea,
@@ -1118,7 +1118,7 @@ const integrationRouter = router({
             neighborhood: p.neighborhood,
             city: p.city,
             state: p.state,
-            mainImage: p.mainImage,
+            coverImage: Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null,
             referenceCode: p.referenceCode,
             url: `https://lemannegocios.com.br/imovel/${p.id}`,
           })),
@@ -1902,7 +1902,7 @@ const reviewsRouter = router({
       propertyId: z.number().optional(),
       leadId: z.number().optional(),
       approved: z.boolean().optional(),
-      featured: z.boolean().optional(),
+      is_featured: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'admin') {
@@ -2028,7 +2028,7 @@ const financingRouter = router({
           phone: input.phone,
           stage: "warm",
           source: "Simulador de Financiamento",
-          clientType: "buyer",
+          interest_type: "buyer",
           notes: `Simulação de financiamento: ${input.selectedBank} - ${input.amortizationSystem}`,
         });
         leadId = newLead.insertId;
@@ -2171,19 +2171,22 @@ const rentalRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.createLandlord(input as any);
+// [FASE2-DISABLED]         return await rentalMgmt.createLandlord(input as any);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
     
     list: protectedProcedure
       .input(z.object({ status: z.string().optional() }).optional())
       .query(async ({ input }) => {
-        return await rentalMgmt.listLandlords(input);
+// [FASE2-DISABLED]         return await rentalMgmt.listLandlords(input);
+        return null;
       }),
     
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return await rentalMgmt.getLandlordById(input.id);
+// [FASE2-DISABLED]         return await rentalMgmt.getLandlordById(input.id);
+        return null;
       }),
     
     update: protectedProcedure
@@ -2202,7 +2205,8 @@ const rentalRouter = router({
         }),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.updateLandlord(input.id, input.data as any);
+// [FASE2-DISABLED]         return await rentalMgmt.updateLandlord(input.id, input.data as any);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
   }),
   
@@ -2223,19 +2227,22 @@ const rentalRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.createTenant(input as any);
+// [FASE2-DISABLED]         return await rentalMgmt.createTenant(input as any);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
     
     list: protectedProcedure
       .input(z.object({ status: z.string().optional() }).optional())
       .query(async ({ input }) => {
-        return await rentalMgmt.listTenants(input);
+// [FASE2-DISABLED]         return await rentalMgmt.listTenants(input);
+        return null;
       }),
     
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return await rentalMgmt.getTenantById(input.id);
+// [FASE2-DISABLED]         return await rentalMgmt.getTenantById(input.id);
+        return null;
       }),
   }),
   
@@ -2259,7 +2266,8 @@ const rentalRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.createRentalContract(input as any);
+// [FASE2-DISABLED]         return await rentalMgmt.createRentalContract(input as any);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
     
     list: protectedProcedure
@@ -2270,13 +2278,15 @@ const rentalRouter = router({
         propertyId: z.number().optional(),
       }).optional())
       .query(async ({ input }) => {
-        return await rentalMgmt.listRentalContracts(input);
+// [FASE2-DISABLED]         return await rentalMgmt.listRentalContracts(input);
+        return null;
       }),
     
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return await rentalMgmt.getRentalContractById(input.id);
+// [FASE2-DISABLED]         return await rentalMgmt.getRentalContractById(input.id);
+        return null;
       }),
   }),
   
@@ -2296,7 +2306,8 @@ const rentalRouter = router({
         dueDate: z.string(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.createRentalPayment(input as any);
+// [FASE2-DISABLED]         return await rentalMgmt.createRentalPayment(input as any);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
     
     list: protectedProcedure
@@ -2307,7 +2318,8 @@ const rentalRouter = router({
         referenceMonth: z.string().optional(),
       }).optional())
       .query(async ({ input }) => {
-        return await rentalMgmt.listRentalPayments(input);
+// [FASE2-DISABLED]         return await rentalMgmt.listRentalPayments(input);
+        return null;
       }),
     
     markAsPaid: protectedProcedure
@@ -2318,18 +2330,15 @@ const rentalRouter = router({
         paymentProof: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.markPaymentAsPaid(
-          input.id,
-          new Date(input.paymentDate),
-          input.paymentMethod,
-          input.paymentProof
-        );
+        // [FASE2-DISABLED] return await rentalMgmt.markPaymentAsPaid(input.id, new Date(input.paymentDate), input.paymentMethod, input.paymentProof);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
     
     generateMonthly: protectedProcedure
       .input(z.object({ referenceMonth: z.string() }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.generateMonthlyPayments(input.referenceMonth);
+        // [FASE2-DISABLED] return await rentalMgmt.generateMonthlyPayments(input.referenceMonth);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
   }),
   
@@ -2348,7 +2357,8 @@ const rentalRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.createPropertyExpense(input as any);
+// [FASE2-DISABLED]         return await rentalMgmt.createPropertyExpense(input as any);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
     
     list: protectedProcedure
@@ -2358,7 +2368,8 @@ const rentalRouter = router({
         status: z.string().optional(),
       }).optional())
       .query(async ({ input }) => {
-        return await rentalMgmt.listPropertyExpenses(input);
+// [FASE2-DISABLED]         return await rentalMgmt.listPropertyExpenses(input);
+        return null;
       }),
   }),
   
@@ -2370,7 +2381,8 @@ const rentalRouter = router({
         referenceMonth: z.string().optional(),
       }).optional())
       .query(async ({ input }) => {
-        return await rentalMgmt.listLandlordTransfers(input);
+// [FASE2-DISABLED]         return await rentalMgmt.listLandlordTransfers(input);
+        return null;
       }),
     
     calculate: protectedProcedure
@@ -2379,7 +2391,8 @@ const rentalRouter = router({
         referenceMonth: z.string(),
       }))
       .mutation(async ({ input }) => {
-        return await rentalMgmt.calculateLandlordTransfer(input.landlordId, input.referenceMonth);
+// [FASE2-DISABLED]         return await rentalMgmt.calculateLandlordTransfer(input.landlordId, input.referenceMonth);
+        return { success: false, message: "rentalMgmt disabled" };
       }),
   }),
   
@@ -2392,11 +2405,8 @@ const rentalRouter = router({
         endMonth: z.string(),
       }))
       .query(async ({ input }) => {
-        return await rentalMgmt.getLandlordFinancialReport(
-          input.landlordId,
-          input.startMonth,
-          input.endMonth
-        );
+        // [FASE2-DISABLED] return await rentalMgmt.getLandlordFinancialReport(input.landlordId, input.startMonth, input.endMonth);
+        return null;
       }),
   }),
 });
@@ -2475,7 +2485,7 @@ const clientsRouter = router({
     
     const newLeads = await dbInstance.select({ count: sql<number>`count(*)` })
       .from(leads)
-      .where(gte(leads.createdAt, startOfMonth));
+      .where(gte(leads.created_at, startOfMonth));
     
     return {
       totalLeads: Number(leadsCount[0]?.count || 0),
@@ -2506,7 +2516,6 @@ export const appRouter = router({
   financial: financialRouter,
   reviews: reviewsRouter,
   financing: financingRouter,
-  rental: rentalRouter,
   clients: clientsRouter,
   webhooks: webhooksRouter,
 });

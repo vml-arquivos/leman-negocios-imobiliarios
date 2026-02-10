@@ -92,8 +92,8 @@ interface UnifiedClient {
   email?: string | null;
   phone?: string | null;
   whatsapp?: string | null;
-  clientType?: string | null;
-  qualification?: string | null;
+  interest_type?: string | null;
+  stage?: string | null;
   stage?: string | null;
   source?: string | null;
   notes?: string | null;
@@ -153,8 +153,8 @@ export default function ClientManagement() {
     email: "",
     phone: "",
     whatsapp: "",
-    clientType: "comprador",
-    qualification: "nao_qualificado",
+    interest_type: "comprador",
+    stage: "nao_qualificado",
     stage: "novo",
     notes: "",
     // Owner fields
@@ -179,12 +179,12 @@ export default function ClientManagement() {
           email: lead.email,
           phone: lead.phone,
           whatsapp: lead.whatsapp,
-          clientType: lead.clientType,
-          qualification: lead.qualification,
+          interest_type: lead.interest_type,
+          stage: lead.stage,
           stage: lead.stage,
           source: lead.source,
           notes: lead.notes,
-          createdAt: lead.createdAt,
+          createdAt: lead.created_at,
           updatedAt: lead.updatedAt,
         });
       });
@@ -207,14 +207,14 @@ export default function ClientManagement() {
           pixKey: owner.pixKey,
           notes: owner.notes,
           active: owner.active,
-          createdAt: owner.createdAt,
+          createdAt: owner.created_at,
           updatedAt: owner.updatedAt,
         });
       });
     }
     
     return clients.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }, [leads, owners]);
 
@@ -243,14 +243,14 @@ export default function ClientManagement() {
 
   // Segmentação de leads
   const newClients = leads?.filter(lead => {
-    const createdDate = new Date(lead.createdAt);
+    const createdDate = new Date(lead.created_at);
     const daysSinceCreated = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
     return daysSinceCreated <= 7;
   }) || [];
 
-  const hotClients = leads?.filter(lead => lead.qualification === 'quente') || [];
-  const warmClients = leads?.filter(lead => lead.qualification === 'morno') || [];
-  const coldClients = leads?.filter(lead => lead.qualification === 'frio') || [];
+  const hotClients = leads?.filter(lead => lead.stage === 'quente') || [];
+  const warmClients = leads?.filter(lead => lead.stage === 'morno') || [];
+  const coldClients = leads?.filter(lead => lead.stage === 'frio') || [];
 
   // Handlers
   const handleOpenDialog = (client?: UnifiedClient) => {
@@ -262,8 +262,8 @@ export default function ClientManagement() {
         email: client.email || "",
         phone: client.phone || "",
         whatsapp: client.whatsapp || "",
-        clientType: client.clientType || "comprador",
-        qualification: client.qualification || "nao_qualificado",
+        interest_type: client.interest_type || "comprador",
+        stage: client.stage || "nao_qualificado",
         stage: client.stage || "novo",
         notes: client.notes || "",
         cpfCnpj: client.cpfCnpj || "",
@@ -281,8 +281,8 @@ export default function ClientManagement() {
         email: "",
         phone: "",
         whatsapp: "",
-        clientType: "comprador",
-        qualification: "nao_qualificado",
+        interest_type: "comprador",
+        stage: "nao_qualificado",
         stage: "novo",
         notes: "",
         cpfCnpj: "",
@@ -394,14 +394,14 @@ export default function ClientManagement() {
     }
   };
 
-  const getQualificationBadge = (qualification: string | null | undefined) => {
+  const getQualificationBadge = (stage: string | null | undefined) => {
     const variants: Record<string, { icon: any; color: string; label: string }> = {
       quente: { icon: Flame, color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", label: "Quente" },
       morno: { icon: Thermometer, color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400", label: "Morno" },
       frio: { icon: Snowflake, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", label: "Frio" },
       nao_qualificado: { icon: Clock, color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400", label: "Não Qualificado" },
     };
-    const variant = variants[qualification || 'nao_qualificado'] || variants.nao_qualificado;
+    const variant = variants[stage || 'nao_qualificado'] || variants.nao_qualificado;
     const Icon = variant.icon;
     return (
       <Badge className={variant.color}>
@@ -616,7 +616,7 @@ export default function ClientManagement() {
                         </TableCell>
                         <TableCell>
                           {client.type === 'lead' ? (
-                            getQualificationBadge(client.qualification)
+                            getQualificationBadge(client.stage)
                           ) : (
                             <Badge className={client.active !== false ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
                               {client.active !== false ? "Ativo" : "Inativo"}
@@ -624,7 +624,7 @@ export default function ClientManagement() {
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(client.createdAt)}
+                          {formatDate(client.created_at)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
@@ -750,7 +750,7 @@ export default function ClientManagement() {
                     <CardContent className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Qualificação:</span>
-                        {getQualificationBadge(selectedClient.qualification)}
+                        {getQualificationBadge(selectedClient.stage)}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Estágio:</span>
@@ -806,7 +806,7 @@ export default function ClientManagement() {
                   <CardContent className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Cadastrado em:</span>
-                      <span>{formatDate(selectedClient.createdAt)}</span>
+                      <span>{formatDate(selectedClient.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Última atualização:</span>

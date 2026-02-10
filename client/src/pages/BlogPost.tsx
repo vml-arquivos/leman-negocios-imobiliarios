@@ -101,7 +101,7 @@ export default function BlogPost() {
               </span>
               <span className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                {format(new Date(post.publishedAt || post.createdAt), "dd 'de' MMMM 'de' yyyy", {
+                {format(new Date(post.publishedAt || post.created_at), "dd 'de' MMMM 'de' yyyy", {
                   locale: ptBR,
                 })}
               </span>

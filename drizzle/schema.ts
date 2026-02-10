@@ -1,388 +1,195 @@
-import { 
-  serial, text, timestamp, varchar, boolean, numeric, 
-  json, jsonb, date, pgEnum, pgTable, integer 
-} from "drizzle-orm/pg-core";
+// ARQUIVO: schema_mestre.ts
+// DESCRIÇÃO: Schema Drizzle Sincronizado com PostgreSQL Real (Leman Imóveis)
+// FONTE: Gemini Architect (Modo PRO)
 
-// ============================================
-// DEFINIÇÃO DE ENUMS (PostgreSQL)
-// ============================================
-export const roleEnum = pgEnum("role", ["user", "admin", "agent"]);
-export const propertyTypeEnum = pgEnum("property_type", ["casa", "apartamento", "cobertura", "terreno", "comercial", "rural"]);
-export const transactionTypeEnum = pgEnum("transaction_type", ["venda", "aluguel", "ambos"]);
-export const propertyStatusEnum = pgEnum("property_status", ["disponivel", "reservado", "vendido", "alugado", "inativo"]);
-export const leadStatusEnum = pgEnum("lead_status", ["novo", "contato_inicial", "qualificado", "visita_agendada", "visita_realizada", "proposta", "negociacao", "fechado_ganho", "fechado_perdido", "sem_interesse"]);
-export const leadProfileEnum = pgEnum("lead_profile", ["lead", "cliente", "proprietario"]);
-export const interestTypeEnum = pgEnum("interest_type", ["compra", "aluguel", "ambos"]);
-export const paymentStatusEnum = pgEnum("payment_status", ["pendente", "pago", "atrasado", "cancelado"]);
-export const amortizationSystemEnum = pgEnum("amortization_system", ["SAC", "PRICE"]);
-export const simulationStatusEnum = pgEnum("simulation_status", ["pending", "contacted", "converted"]);
+import { pgTable, serial, varchar, text, timestamp, integer, bigint, boolean, decimal, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
-// ============================================
-// TABELA DE USUÁRIOS
-// ============================================
+// --- NÚCLEO: USUÁRIOS & AUTH ---
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   open_id: varchar("open_id", { length: 255 }).unique(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }),
   name: varchar("name", { length: 255 }).notNull(),
-  role: varchar("role", { length: 50 }).default("user"),
+  role: varchar("role", { length: 50 }).default("user"), // admin, agent, user, owner
   avatar_url: text("avatar_url"),
-  last_signed_in: timestamp("last_signed_in"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  phone: varchar("phone", { length: 20 }),
+  last_sign_in_at: timestamp("last_sign_in_at"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE IMÓVEIS
-// ============================================
+// --- IMÓVEIS (VITRINE) ---
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  reference_code: varchar("reference_code").unique(),
-  property_type: propertyTypeEnum("property_type").notNull(),
-  transaction_type: transactionTypeEnum("transaction_type").notNull(),
-  address: varchar("address"),
-  neighborhood: varchar("neighborhood"),
-  city: varchar("city").default("Brasília"),
-  state: varchar("state").default("DF"),
-  zip_code: varchar("zip_code"),
-  latitude: numeric("latitude"),
-  longitude: numeric("longitude"),
-  sale_price: integer("sale_price"),
-  rent_price: integer("rent_price"),
-  condo_fee: integer("condo_fee"),
-  iptu: integer("iptu"),
+  property_type: varchar("property_type", { length: 50 }).notNull(),
+  transaction_type: varchar("transaction_type", { length: 50 }).notNull(),
+  // FINANCEIRO IMÓVEL (Centavos para evitar erro de arredondamento)
+  price: bigint("price", { mode: "number" }), 
+  rental_price: bigint("rental_price", { mode: "number" }),
+  condo_fee: bigint("condo_fee", { mode: "number" }),
+  iptu: bigint("iptu", { mode: "number" }),
+  // DETALHES
+  area: decimal("area", { precision: 10, scale: 2 }),
   bedrooms: integer("bedrooms"),
   bathrooms: integer("bathrooms"),
   suites: integer("suites"),
   parking_spaces: integer("parking_spaces"),
-  total_area: integer("total_area"),
-  built_area: integer("built_area"),
-  features: json("features").$type<string[]>().default([]),
-  images: json("images").$type<string[]>().default([]),
-  main_image: varchar("main_image"),
+  // LOCALIZAÇÃO
+  address: varchar("address", { length: 255 }),
+  neighborhood: varchar("neighborhood", { length: 100 }),
+  city: varchar("city", { length: 100 }).default("Brasília"),
+  state: varchar("state", { length: 2 }).default("DF"),
+  zip_code: varchar("zip_code", { length: 10 }),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  // MÍDIA E METADADOS
+  features: jsonb("features").default([]),
+  images: jsonb("images").default([]), // Backup legado, usar tabela propertyImages
   video_url: text("video_url"),
-  tour_virtual_url: text("tour_virtual_url"),
-  status: propertyStatusEnum("status").default("disponivel").notNull(),
-  featured: boolean("featured").default(false),
-  published: boolean("published").default(true),
-  meta_title: varchar("meta_title"),
-  meta_description: text("meta_description"),
-  slug: varchar("slug").unique(),
-  owner_id: integer("owner_id"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-  created_by: integer("created_by").references(() => users.id),
+  virtual_tour_url: text("virtual_tour_url"),
+  status: varchar("status", { length: 50 }).default("disponivel"),
+  is_featured: boolean("is_featured").default(false),
+  views_count: integer("views_count").default(0),
+  owner_id: integer("owner_id").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE IMAGENS DE IMÓVEIS
-// ============================================
 export const propertyImages = pgTable("property_images", {
   id: serial("id").primaryKey(),
   property_id: integer("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
-  url: varchar("url", { length: 500 }).notNull(),
-  caption: text("caption"),
+  url: text("url").notNull(),
+  title: varchar("title"),
   display_order: integer("display_order").default(0),
-  is_main: boolean("is_main").default(false),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  is_cover: boolean("is_cover").default(false),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE LEADS
-// ============================================
+// --- CRM & INTELIGÊNCIA ARTIFICIAL ---
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
-  telefone: varchar("telefone", { length: 20 }).notNull().unique(),
-  cpf: varchar("cpf", { length: 14 }),
-  profile: leadProfileEnum("profile").default("lead"),
-  status: leadStatusEnum("status").default("novo").notNull(),
-  interesse: text("interesse"),
-  tipo_imovel: propertyTypeEnum("tipo_imovel"),
-  finalidade: interestTypeEnum("finalidade"),
-  orcamento_min: integer("orcamento_min"),
-  orcamento_max: integer("orcamento_max"),
-  regioes_interesse: json("regioes_interesse").$type<string[]>(),
-  quartos: integer("quartos"),
-  vagas: integer("vagas"),
-  observacoes: text("observacoes"),
-  score: integer("score").default(0),
-  origem: varchar("origem").default("whatsapp"),
-  utm_source: varchar("utm_source"),
-  utm_medium: varchar("utm_medium"),
-  utm_campaign: varchar("utm_campaign"),
-  tags: json("tags").$type<string[]>(),
-  metadata: json("metadata").default({}),
-  ultima_interacao: timestamp("ultima_interacao").defaultNow(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  whatsapp: varchar("whatsapp", { length: 20 }),
+  source: varchar("source", { length: 100 }), // site, facebook, indicação
+  stage: varchar("stage", { length: 50 }).default("new"), // new, contacted, visiting, proposal, closed
+  interest_type: varchar("interest_type", { length: 50 }), // compra, aluguel
+  budget_min: bigint("budget_min", { mode: "number" }),
+  budget_max: bigint("budget_max", { mode: "number" }),
+  preferred_neighborhoods: jsonb("preferred_neighborhoods").default([]),
+  notes: text("notes"),
   assigned_to: integer("assigned_to").references(() => users.id),
+  // CÉREBRO DA IA
+  ai_profile: jsonb("ai_profile"), // Perfil comportamental gerado
+  ai_score: integer("ai_score").default(0), // 0 a 100 (Probabilidade de Fechamento)
+  ai_insights: text("ai_insights"),
+  last_interaction_at: timestamp("last_interaction_at"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE INTERAÇÕES
-// ============================================
-export const interactions = pgTable("interactions", {
+export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
-  lead_id: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  lead_id: integer("lead_id").references(() => leads.id),
   user_id: integer("user_id").references(() => users.id),
-  tipo: varchar("tipo", { length: 50 }).notNull(),
-  canal: varchar("canal").default("whatsapp"),
-  assunto: varchar("assunto"),
-  descricao: text("descricao"),
-  resultado: varchar("resultado"),
-  proxima_acao: varchar("proxima_acao"),
-  data_proxima_acao: timestamp("data_proxima_acao"),
-  metadata: json("metadata").default({}),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  channel: varchar("channel", { length: 50 }).default("whatsapp"),
+  status: varchar("status", { length: 50 }).default("open"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE SIMULAÇÕES DE FINANCIAMENTO
-// ============================================
-export const financingSimulations = pgTable("financing_simulations", {
+export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
-  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
-  telefone: varchar("telefone", { length: 20 }).notNull(),
-  property_type: varchar("property_type"),
-  desired_location: varchar("desired_location"),
-  estimated_value: integer("estimated_value"),
-  property_value: integer("property_value").notNull(),
-  down_payment: integer("down_payment").notNull(),
-  financed_amount: integer("financed_amount").notNull(),
-  term_months: integer("term_months").notNull(),
-  amortization_system: amortizationSystemEnum("amortization_system").default("SAC").notNull(),
-  selected_bank: varchar("selected_bank"),
-  interest_rate: numeric("interest_rate", { precision: 5, scale: 2 }),
-  first_installment: integer("first_installment"),
-  last_installment: integer("last_installment"),
-  average_installment: integer("average_installment"),
-  total_amount: integer("total_amount"),
-  total_interest: integer("total_interest"),
-  ip_address: varchar("ip_address"),
-  user_agent: text("user_agent"),
-  status: simulationStatusEnum("status").default("pending"),
-  contacted: boolean("contacted").default(false),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  conversation_id: integer("conversation_id").references(() => conversations.id),
+  sender_type: varchar("sender_type", { length: 20 }), // 'user', 'lead', 'system', 'ai'
+  content: text("content"),
+  metadata: jsonb("metadata"),
+  is_read: boolean("is_read").default(false),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE PAGAMENTOS DE ALUGUEL
-// ============================================
+export const aiPropertyMatches = pgTable("ai_property_matches", {
+  id: serial("id").primaryKey(),
+  lead_id: integer("lead_id").notNull().references(() => leads.id),
+  property_id: integer("property_id").notNull().references(() => properties.id),
+  match_score: decimal("match_score", { precision: 5, scale: 2 }), // Score de compatibilidade
+  match_reasons: jsonb("match_reasons"), // Por que deu match? (ex: "Bairro correto, Preço dentro")
+  status: varchar("status", { length: 50 }).default("pending"), // pending, sent, liked, rejected
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// --- FINANCEIRO & LOCAÇÃO (SAAS) ---
+export const landlords = pgTable("landlords", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  cpf_cnpj: varchar("cpf_cnpj", { length: 20 }).unique(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  bank_info: jsonb("bank_info"), // Banco, Agência, Conta, PIX
+  commission_rate: decimal("commission_rate", { precision: 5, scale: 2 }).default("10.00"),
+  status: varchar("status").default("active"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const tenants = pgTable("tenants", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  cpf: varchar("cpf", { length: 20 }).unique(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  status: varchar("status").default("active"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const rentalContracts = pgTable("rental_contracts", {
+  id: serial("id").primaryKey(),
+  property_id: integer("property_id").references(() => properties.id),
+  landlord_id: integer("landlord_id").references(() => landlords.id),
+  tenant_id: integer("tenant_id").references(() => tenants.id),
+  start_date: timestamp("start_date").notNull(),
+  end_date: timestamp("end_date").notNull(),
+  rent_amount: bigint("rent_amount", { mode: "number" }).notNull(), // Valor do aluguel vigente
+  payment_day: integer("payment_day").default(5),
+  status: varchar("status").default("active"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 export const rentalPayments = pgTable("rental_payments", {
   id: serial("id").primaryKey(),
-  property_id: integer("property_id").references(() => properties.id),
-  tenant_name: varchar("tenant_name", { length: 255 }),
-  referenceMonth: varchar("referenceMonth", { length: 7 }).notNull(),
-  rent_amount: integer("rent_amount").notNull(),
-  condo_fee: integer("condo_fee"),
-  iptu: integer("iptu"),
-  other_charges: integer("other_charges"),
-  totalAmount: integer("totalAmount").notNull(),
-  payment_status: paymentStatusEnum("payment_status").default("pendente").notNull(),
-  dueDate: date("dueDate").notNull(),
-  paid_date: date("paid_date"),
-  payment_method: varchar("payment_method", { length: 50 }),
-  notes: text("notes"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  contract_id: integer("contract_id").references(() => rentalContracts.id),
+  reference_month: varchar("reference_month", { length: 7 }), // "2023-10"
+  amount_total: bigint("amount_total", { mode: "number" }), // Aluguel + Condomínio + IPTU
+  amount_net: bigint("amount_net", { mode: "number" }), // O que vai pro dono
+  status: varchar("status").default("pending"), // pending, paid, overdue
+  due_date: timestamp("due_date"),
+  paid_at: timestamp("paid_at"),
 });
 
-// ============================================
-// TABELA DE CONVERSAS N8N
-// ============================================
-export const n8nConversas = pgTable("n8n_conversas", {
+export const financingSimulations = pgTable("financing_simulations", {
   id: serial("id").primaryKey(),
-  telefone: varchar("telefone", { length: 20 }).notNull().unique(),
-  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
-  nome: varchar("nome"),
-  email: varchar("email"),
-  status: varchar("status").default("ativo"),
-  origem: varchar("origem").default("whatsapp"),
-  tags: json("tags").$type<string[]>(),
-  metadata: json("metadata").default({}),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-  ultima_interacao: timestamp("ultima_interacao").defaultNow().notNull(),
+  lead_id: integer("lead_id").references(() => leads.id),
+  property_value: bigint("property_value", { mode: "number" }),
+  down_payment: bigint("down_payment", { mode: "number" }),
+  term_months: integer("term_months"),
+  interest_rate: decimal("interest_rate", { precision: 5, scale: 2 }),
+  simulation_result: jsonb("simulation_result"), // Dados SAC/PRICE completos
+  created_at: timestamp("created_at").defaultNow(),
 });
 
-// ============================================
-// TABELA DE MENSAGENS N8N
-// ============================================
-export const n8nMensagens = pgTable("n8n_mensagens", {
-  id: serial("id").primaryKey(),
-  conversa_id: integer("conversa_id").references(() => n8nConversas.id),
-  telefone: varchar("telefone", { length: 20 }).notNull(),
-  mensagem: text("mensagem").notNull(),
-  tipo: varchar("tipo").default("texto"),
-  direcao: varchar("direcao").default("recebida"),
-  metadata: json("metadata").default({}),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
+// RELAÇÕES (Para queries inteligentes do Drizzle)
+export const propertiesRelations = relations(properties, ({ one, many }) => ({
+  owner: one(users, { fields: [properties.owner_id], references: [users.id] }),
+  images: many(propertyImages),
+  matches: many(aiPropertyMatches),
+}));
 
-// ============================================
-// TABELA DE FILA DE MENSAGENS N8N
-// ============================================
-export const n8nFilaMensagens = pgTable("n8n_fila_mensagens", {
-  id: serial("id").primaryKey(),
-  telefone: varchar("telefone", { length: 20 }).notNull(),
-  id_mensagem: varchar("id_mensagem").notNull().unique(),
-  mensagem: text("mensagem").notNull(),
-  processada: boolean("processada").default(false),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE AUTOMAÇÕES LOG N8N
-// ============================================
-export const n8nAutomacoesLog = pgTable("n8n_automacoes_log", {
-  id: serial("id").primaryKey(),
-  workflow_id: varchar("workflow_id").notNull(),
-  workflow_name: varchar("workflow_name"),
-  execution_id: varchar("execution_id"),
-  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
-  acao: varchar("acao").notNull(),
-  resultado: varchar("resultado").notNull(),
-  erro: text("erro"),
-  metadata: json("metadata").default({}),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE LIGAÇÕES N8N
-// ============================================
-export const n8nLigacoes = pgTable("n8n_ligacoes", {
-  id: serial("id").primaryKey(),
-  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
-  telefone: varchar("telefone", { length: 20 }).notNull(),
-  retell_call_id: varchar("retell_call_id").unique(),
-  duracao: integer("duracao"),
-  transcricao: text("transcricao"),
-  resumo: text("resumo"),
-  sentimento: varchar("sentimento"),
-  proxima_acao: text("proxima_acao"),
-  gravacao_url: text("gravacao_url"),
-  status: varchar("status").default("concluida"),
-  metadata: json("metadata").default({}),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE ANALYTICS EVENTS
-// ============================================
-export const analyticsEvents = pgTable("analytics_events", {
-  id: serial("id").primaryKey(),
-  event_type: varchar("event_type").notNull(),
-  event_data: json("event_data").default({}),
-  user_id: integer("user_id").references(() => users.id),
-  session_id: varchar("session_id"),
-  ip_address: varchar("ip_address"),
-  user_agent: text("user_agent"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE CAMPAIGN SOURCES
-// ============================================
-export const campaignSources = pgTable("campaign_sources", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull().unique(),
-  utm_source: varchar("utm_source"),
-  utm_medium: varchar("utm_medium"),
-  utm_campaign: varchar("utm_campaign"),
-  active: boolean("active").default(true),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE BLOG CATEGORIES
-// ============================================
-export const blogCategories = pgTable("blog_categories", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE BLOG POSTS
-// ============================================
-export const blogPosts = pgTable("blog_posts", {
-  id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
-  content: text("content"),
-  excerpt: text("excerpt"),
-  featured_image: varchar("featured_image", { length: 500 }),
-  category_id: integer("category_id").references(() => blogCategories.id),
-  author_id: integer("author_id").references(() => users.id),
-  published: boolean("published").default(false),
-  published_at: timestamp("published_at"),
-  meta_title: varchar("meta_title"),
-  meta_description: text("meta_description"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE SITE SETTINGS
-// ============================================
-export const siteSettings = pgTable("site_settings", {
-  id: serial("id").primaryKey(),
-  key: varchar("key", { length: 255 }).notNull().unique(),
-  value: text("value"),
-  type: varchar("type").default("text"),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TABELA DE REVIEWS
-// ============================================
-export const reviews = pgTable("reviews", {
-  id: serial("id").primaryKey(),
-  property_id: integer("property_id").references(() => properties.id),
-  lead_id: integer("lead_id").references(() => leads.id, { onDelete: "cascade" }),
-  client_name: varchar("client_name", { length: 255 }).notNull(),
-  client_photo: varchar("client_photo", { length: 500 }),
-  rating: integer("rating").notNull(),
-  comment: text("comment"),
-  approved: boolean("approved").default(false),
-  featured: boolean("featured").default(false),
-  display_order: integer("display_order"),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// ============================================
-// TIPOS INFERIDOS (para TypeScript)
-// ============================================
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-export type Property = typeof properties.$inferSelect;
-export type InsertProperty = typeof properties.$inferInsert;
-export type PropertyImage = typeof propertyImages.$inferSelect;
-export type InsertPropertyImage = typeof propertyImages.$inferInsert;
-export type Lead = typeof leads.$inferSelect;
-export type InsertLead = typeof leads.$inferInsert;
-export type Interaction = typeof interactions.$inferSelect;
-export type InsertInteraction = typeof interactions.$inferInsert;
-export type FinancingSimulation = typeof financingSimulations.$inferSelect;
-export type InsertFinancingSimulation = typeof financingSimulations.$inferInsert;
-export type RentalPayment = typeof rentalPayments.$inferSelect;
-export type InsertRentalPayment = typeof rentalPayments.$inferInsert;
-export type BlogCategory = typeof blogCategories.$inferSelect;
-export type InsertBlogCategory = typeof blogCategories.$inferInsert;
-export type BlogPost = typeof blogPosts.$inferSelect;
-export type InsertBlogPost = typeof blogPosts.$inferInsert;
-export type SiteSetting = typeof siteSettings.$inferSelect;
-export type InsertSiteSetting = typeof siteSettings.$inferInsert;
-export type Review = typeof reviews.$inferSelect;
-export type InsertReview = typeof reviews.$inferInsert;
+export const leadsRelations = relations(leads, ({ many }) => ({
+  matches: many(aiPropertyMatches),
+  simulations: many(financingSimulations),
+  conversations: many(conversations),
+}));

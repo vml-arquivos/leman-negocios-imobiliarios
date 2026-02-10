@@ -10,14 +10,14 @@ import { z } from "zod";
 import { getDb } from "../db";
 import { leads } from "../../drizzle/schema";
 import { eq, or, sql } from "drizzle-orm";
-import {
-  getOrCreateConversa,
-  saveMensagem,
-  addToFilaMensagens,
-  findClientByPhone,
-  logAutomacao,
-  notifyN8NNewLead,
-} from "../n8n-integration";
+// [FASE2-DISABLED] import {
+// [FASE2-DISABLED]   getOrCreateConversa,
+// [FASE2-DISABLED]   saveMensagem,
+// [FASE2-DISABLED]   addToFilaMensagens,
+// [FASE2-DISABLED]   findClientByPhone,
+// [FASE2-DISABLED]   logAutomacao,
+// [FASE2-DISABLED]   notifyN8NNewLead,
+// [FASE2-DISABLED] } from "../n8n-integration";
 
 // ============================================
 // SCHEMAS DE VALIDAÇÃO
@@ -87,8 +87,8 @@ export const webhooksRouter = router({
               whatsapp: input.phone,
               source: "whatsapp",
               stage: "novo",
-              clientType: "comprador",
-              qualification: "nao_qualificado",
+              interest_type: "comprador",
+              
               notes: `Lead criado automaticamente via WhatsApp em ${new Date().toISOString()}`,
             })
             .returning();
@@ -184,7 +184,7 @@ export const webhooksRouter = router({
   getConversationHistory: publicProcedure
     .input(phoneSchema.extend({ limit: z.number().optional() }))
     .query(async ({ input }) => {
-      const { getChatHistory } = await import("../n8n-integration");
+      // [FASE2-DISABLED] const { getChatHistory } = await import("../n8n-integration");
       const messages = await getChatHistory(input.phone, input.limit);
 
       return {
