@@ -2,9 +2,8 @@ import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Upload, X, Star, Loader2, Image as ImageIcon } from "lucide-react";
+import { Upload, X, Star, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { storagePut } from "../../../server/storage";
 
 interface PropertyImageUploadProps {
   propertyId: number;
@@ -18,10 +17,10 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
 
   const utils = trpc.useUtils();
   const { data: images, isLoading } = trpc.propertyImages.list.useQuery({ propertyId });
-  const uploadMutation = trpc.propertyImages.upload.useMutation({
+  
+  const uploadFileMutation = trpc.propertyImages.uploadFile.useMutation({
     onSuccess: () => {
       utils.propertyImages.list.invalidate({ propertyId });
-      toast.success("Imagem enviada com sucesso!");
     },
     onError: (error) => {
       toast.error(`Erro ao enviar imagem: ${error.message}`);
@@ -35,7 +34,7 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
     },
   });
 
-  const setPrimaryMutation = trpc.propertyImages.setPrimary.useMutation({
+  const setMainMutation = trpc.propertyImages.setMain.useMutation({
     onSuccess: () => {
       utils.propertyImages.list.invalidate({ propertyId });
       toast.success("Imagem principal definida!");
@@ -67,34 +66,27 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
           continue;
         }
 
-        // Ler arquivo como buffer
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = new Uint8Array(arrayBuffer);
+        // Converter arquivo para base64
+        const fileData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
-        // Gerar nome único para o arquivo
-        const timestamp = Date.now();
-        const randomSuffix = Math.random().toString(36).substring(7);
-        const extension = file.name.split('.').pop();
-        const fileKey = `properties/${propertyId}/${timestamp}-${randomSuffix}.${extension}`;
-
-        // Upload para S3 (precisa ser feito no servidor)
-        // Por enquanto, vamos simular com uma URL local
-        // Em produção, você faria o upload via um endpoint dedicado
-        
-        // Criar URL temporária para preview
-        const imageUrl = URL.createObjectURL(file);
-        
-        // Salvar no banco de dados
-        await uploadMutation.mutateAsync({
+        // Upload via tRPC mutation
+        await uploadFileMutation.mutateAsync({
           propertyId,
-          imageUrl: imageUrl, // Em produção, seria a URL do S3
-          imageKey: fileKey,
-          isPrimary: images?.length === 0 && i === 0 ? 1 : 0,
-          displayOrder: (images?.length || 0) + i,
+          filename: file.name,
+          contentType: file.type,
+          fileData,
+          isMain: images?.length === 0 && i === 0, // Primeira imagem é principal
         });
 
         setUploadProgress(((i + 1) / totalFiles) * 100);
       }
+
+      toast.success(`${totalFiles} ${totalFiles === 1 ? 'imagem enviada' : 'imagens enviadas'} com sucesso!`);
 
       if (onUploadComplete) {
         onUploadComplete();
@@ -113,11 +105,11 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
 
   const handleDelete = async (imageId: number) => {
     if (!confirm("Tem certeza que deseja remover esta imagem?")) return;
-    await deleteMutation.mutateAsync({ id: imageId });
+    await deleteMutation.mutateAsync({ propertyId, imageId });
   };
 
-  const handleSetPrimary = async (imageId: number) => {
-    await setPrimaryMutation.mutateAsync({ imageId, propertyId });
+  const handleSetMain = async (imageId: number) => {
+    await setMainMutation.mutateAsync({ imageId, propertyId });
   };
 
   if (isLoading) {
@@ -141,13 +133,18 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
             onChange={handleFileSelect}
             className="hidden"
             id="image-upload"
+            disabled={uploading}
           />
           <label
             htmlFor="image-upload"
-            className="flex flex-col items-center justify-center cursor-pointer"
+            className={`flex flex-col items-center justify-center ${uploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             <div className="p-4 rounded-full bg-primary/10 mb-4">
-              <Upload className="h-8 w-8 text-primary" />
+              {uploading ? (
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              ) : (
+                <Upload className="h-8 w-8 text-primary" />
+              )}
             </div>
             <h3 className="text-lg font-semibold mb-2">
               {uploading ? "Enviando imagens..." : "Clique para fazer upload"}
@@ -181,50 +178,53 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
             <Card key={image.id} className="relative group overflow-hidden">
               <div className="aspect-square relative">
                 <img
-                  src={image.imageUrl}
+                  src={image.url}
                   alt={image.caption || "Imagem do imóvel"}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback para imagem quebrada
+                    e.currentTarget.src = 'https://via.placeholder.com/400x400?text=Imagem+não+encontrada';
+                  }}
                 />
+                
+                {/* Badge de imagem principal */}
+                {image.is_main && (
+                  <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-current" />
+                    Principal
+                  </div>
+                )}
                 
                 {/* Overlay com ações */}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <Button
                     size="sm"
-                    variant={image.isPrimary === 1 ? "default" : "secondary"}
-                    onClick={() => handleSetPrimary(image.id)}
-                    disabled={setPrimaryMutation.isPending}
+                    variant={image.is_main ? "default" : "secondary"}
+                    onClick={() => handleSetMain(image.id)}
+                    disabled={setMainMutation.isPending}
+                    title="Definir como principal"
                   >
-                    <Star className={`h-4 w-4 ${image.isPrimary === 1 ? 'fill-current' : ''}`} />
+                    <Star className={`h-4 w-4 ${image.is_main ? 'fill-current' : ''}`} />
                   </Button>
                   <Button
                     size="sm"
                     variant="destructive"
                     onClick={() => handleDelete(image.id)}
                     disabled={deleteMutation.isPending}
+                    title="Remover imagem"
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-
-                {/* Badge de imagem principal */}
-                {image.isPrimary === 1 && (
-                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-current" />
-                    Principal
-                  </div>
-                )}
               </div>
             </Card>
           ))}
         </div>
       ) : (
-        <Card className="p-12">
-          <div className="text-center text-muted-foreground">
-            <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhuma imagem adicionada ainda</p>
-            <p className="text-sm mt-2">Faça upload de fotos para este imóvel</p>
-          </div>
-        </Card>
+        <div className="text-center py-12 text-muted-foreground">
+          <p>Nenhuma imagem adicionada ainda.</p>
+          <p className="text-sm">Clique no botão acima para fazer upload.</p>
+        </div>
       )}
     </div>
   );

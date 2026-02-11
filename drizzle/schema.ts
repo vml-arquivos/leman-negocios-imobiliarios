@@ -60,6 +60,18 @@ export const properties = pgTable("properties", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+// TABELA DE IMAGENS DE IMÓVEIS
+export const propertyImages = pgTable("property_images", {
+  id: serial("id").primaryKey(),
+  property_id: integer("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  url: varchar("url", { length: 1024 }).notNull(),
+  caption: text("caption"),
+  display_order: integer("display_order").notNull().default(0),
+  is_main: boolean("is_main").notNull().default(false),
+  storage_key: text("storage_key"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),

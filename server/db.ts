@@ -3,7 +3,7 @@
 import { ENV } from "./_core/env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { eq, desc, and, or, like, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, asc, and, or, like, gte, lte, sql } from "drizzle-orm";
 
 // ============================================
 import {
@@ -275,13 +275,36 @@ export async function listProperties(params: {
     .limit(params.limit || 50)
     .offset(params.offset || 0);
 
+  // Buscar imagens de property_images para cada imóvel
+  const { propertyImages } = await import("../drizzle/schema");
+  const itemsWithImages = await Promise.all(
+    items.map(async (property) => {
+      const images = await database
+        .select()
+        .from(propertyImages)
+        .where(eq(propertyImages.property_id, property.id))
+        .orderBy(desc(propertyImages.is_main), asc(propertyImages.display_order));
+
+      // Retornar URLs das imagens como array de strings
+      const imageUrls = images.map(img => img.url);
+
+      // Fallback: se não houver imagens em property_images, usar properties.images (legado)
+      const finalImages = imageUrls.length > 0 ? imageUrls : (property.images as any) || [];
+
+      return {
+        ...property,
+        images: finalImages,
+      };
+    })
+  );
+
   const totalResult = await database
     .select({ count: sql<number>`count(*)` })
     .from(properties)
     .where(whereClause);
 
   return {
-    items,
+    items: itemsWithImages,
     total: Number(totalResult[0]?.count || 0),
   };
 }

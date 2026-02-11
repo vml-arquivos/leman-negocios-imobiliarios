@@ -7,8 +7,8 @@ import { z } from "zod";
 import * as db from "./db";
 // [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
-import { eq, desc, gte, sql } from "drizzle-orm";
-import { financingSimulations, leads, rentalPayments, properties, landlords, tenants } from "../drizzle/schema";
+import { eq, desc, asc, gte, sql } from "drizzle-orm";
+import { financingSimulations, leads, rentalPayments, properties, landlords, tenants, propertyImages } from "../drizzle/schema";
 
 // ============================================
 // AUTH ROUTER
@@ -805,41 +805,130 @@ const propertyImagesRouter = router({
       propertyId: z.number(),
     }))
     .query(async ({ input }) => {
-      return await db.getPropertyImages(input.propertyId);
+      const images = await _db
+        .select()
+        .from(propertyImages)
+        .where(eq(propertyImages.property_id, input.propertyId))
+        .orderBy(
+          desc(propertyImages.is_main),
+          asc(propertyImages.display_order),
+          asc(propertyImages.created_at)
+        );
+      return images;
     }),
 
-  // Upload de imagem (protegido - admin)
-  upload: protectedProcedure
+  // Criar URL de upload (protegido - admin)
+  createUploadUrl: protectedProcedure
     .input(z.object({
       propertyId: z.number(),
-      imageUrl: z.string(),
-      imageKey: z.string(),
-      isPrimary: z.number().optional(),
-      displayOrder: z.number().optional(),
-      caption: z.string().optional(),
+      filename: z.string(),
+      contentType: z.string(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'admin') {
         throw new Error('Apenas administradores podem fazer upload de imagens');
       }
-      return await db.createPropertyImage(input);
+
+      const { generateStorageKey, getPublicUrl } = await import("./storage/supabase");
+      const key = generateStorageKey(input.propertyId, input.filename);
+      const publicUrl = getPublicUrl(key);
+
+      return {
+        key,
+        uploadUrl: publicUrl, // Upload será via backend (ver save)
+        publicUrl,
+      };
     }),
 
-  // Deletar imagem (protegido - admin)
-  delete: protectedProcedure
+  // Upload de arquivo (protegido - admin)
+  uploadFile: protectedProcedure
     .input(z.object({
-      id: z.number(),
+      propertyId: z.number(),
+      filename: z.string(),
+      contentType: z.string(),
+      fileData: z.string(), // Base64
+      caption: z.string().optional(),
+      isMain: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'admin') {
-        throw new Error('Apenas administradores podem deletar imagens');
+        throw new Error('Apenas administradores podem fazer upload de imagens');
       }
-      await db.deletePropertyImage(input.id);
-      return { success: true };
+
+      const { generateStorageKey, uploadFile } = await import("./storage/supabase");
+      const key = generateStorageKey(input.propertyId, input.filename);
+
+      // Converter base64 para Buffer
+      const base64Data = input.fileData.split(',')[1] || input.fileData;
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Upload para Supabase Storage
+      const publicUrl = await uploadFile(key, buffer, input.contentType);
+
+      // Se isMain === true, zerar is_main das outras imagens
+      if (input.isMain) {
+        await _db
+          .update(propertyImages)
+          .set({ is_main: false })
+          .where(eq(propertyImages.property_id, input.propertyId));
+      }
+
+      // Salvar no DB
+      const [image] = await _db
+        .insert(propertyImages)
+        .values({
+          property_id: input.propertyId,
+          url: publicUrl,
+          caption: input.caption || null,
+          display_order: 0,
+          is_main: input.isMain ?? false,
+          storage_key: key,
+        })
+        .returning();
+
+      return image;
+    }),
+
+  // Salvar imagem no DB após upload (protegido - admin)
+  save: protectedProcedure
+    .input(z.object({
+      propertyId: z.number(),
+      url: z.string(),
+      caption: z.string().optional(),
+      displayOrder: z.number().optional(),
+      isMain: z.boolean().optional(),
+      storageKey: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem salvar imagens');
+      }
+
+      // Se isMain === true, zerar is_main das outras imagens
+      if (input.isMain) {
+        await _db
+          .update(propertyImages)
+          .set({ is_main: false })
+          .where(eq(propertyImages.property_id, input.propertyId));
+      }
+
+      const [image] = await _db
+        .insert(propertyImages)
+        .values({
+          property_id: input.propertyId,
+          url: input.url,
+          caption: input.caption || null,
+          display_order: input.displayOrder ?? 0,
+          is_main: input.isMain ?? false,
+          storage_key: input.storageKey || null,
+        })
+        .returning();
+
+      return image;
     }),
 
   // Definir imagem principal (protegido - admin)
-  setPrimary: protectedProcedure
+  setMain: protectedProcedure
     .input(z.object({
       imageId: z.number(),
       propertyId: z.number(),
@@ -848,24 +937,63 @@ const propertyImagesRouter = router({
       if (ctx.user.role !== 'admin') {
         throw new Error('Apenas administradores podem definir imagem principal');
       }
-      await db.setPrimaryImage(input.imageId, input.propertyId);
+
+      // Zerar is_main de todas as imagens do imóvel
+      await _db
+        .update(propertyImages)
+        .set({ is_main: false })
+        .where(eq(propertyImages.property_id, input.propertyId));
+
+      // Setar is_main da imagem selecionada
+      await _db
+        .update(propertyImages)
+        .set({ is_main: true })
+        .where(eq(propertyImages.id, input.imageId));
+
       return { success: true };
     }),
 
-  // Atualizar ordem da imagem (protegido - admin)
-  updateOrder: protectedProcedure
+  // Deletar imagem (protegido - admin)
+  delete: protectedProcedure
     .input(z.object({
+      propertyId: z.number(),
       imageId: z.number(),
-      displayOrder: z.number(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== 'admin') {
-        throw new Error('Apenas administradores podem atualizar ordem das imagens');
+        throw new Error('Apenas administradores podem deletar imagens');
       }
-      await db.updateImageOrder(input.imageId, input.displayOrder);
+
+      // Buscar imagem para pegar storage_key
+      const [image] = await _db
+        .select()
+        .from(propertyImages)
+        .where(eq(propertyImages.id, input.imageId));
+
+      if (!image) {
+        throw new Error('Imagem não encontrada');
+      }
+
+      // Deletar do storage se tiver storage_key
+      if (image.storage_key) {
+        try {
+          const { deleteObject } = await import("./storage/supabase");
+          await deleteObject(image.storage_key);
+        } catch (error) {
+          console.error('Erro ao deletar imagem do storage:', error);
+          // Continua mesmo se falhar (imagem pode não existir mais)
+        }
+      }
+
+      // Deletar do DB
+      await _db
+        .delete(propertyImages)
+        .where(eq(propertyImages.id, input.imageId));
+
       return { success: true };
     }),
 });
+
 
 // ============================================
 // INTEGRATION ROUTER (WhatsApp / N8N)
