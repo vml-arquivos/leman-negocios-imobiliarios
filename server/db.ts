@@ -84,13 +84,27 @@ export const db = {
   },
 
   updateUserLastSignIn: async (userId: number): Promise<void> => {
-    const database = await getDb();
-    if (!database) return;
-    
-    await database
-      .update(users)
-      .set({ last_sign_in_at: new Date() })
-      .where(eq(users.id, userId));
+    try {
+      const database = await getDb();
+      if (!database) {
+        console.warn('[DB] Database not available, skipping last_sign_in_at update');
+        return;
+      }
+      
+      const now = new Date();
+      const updateData: any = {
+        last_sign_in_at: now,
+        updated_at: now,
+      };
+      
+      await database
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId));
+    } catch (error) {
+      console.error('[DB] Error updating last_sign_in_at:', error);
+      // Não lançar erro para não derrubar o login
+    }
   },
 
   listUsers: async (): Promise<User[]> => {

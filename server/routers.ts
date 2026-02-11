@@ -805,7 +805,12 @@ const propertyImagesRouter = router({
       propertyId: z.number(),
     }))
     .query(async ({ input }) => {
-      const images = await _db
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+      
+      const images = await database
         .select()
         .from(propertyImages)
         .where(eq(propertyImages.property_id, input.propertyId))
@@ -855,38 +860,48 @@ const propertyImagesRouter = router({
         throw new Error('Apenas administradores podem fazer upload de imagens');
       }
 
-      const { generateStorageKey, uploadFile } = await import("./storage/supabase");
-      const key = generateStorageKey(input.propertyId, input.filename);
+      try {
+        const database = await getDb();
+        if (!database) {
+          throw new Error('Database not available');
+        }
+        
+        const { generateStorageKey, uploadFile } = await import("./storage/supabase");
+        const key = generateStorageKey(input.propertyId, input.filename);
 
-      // Converter base64 para Buffer
-      const base64Data = input.fileData.split(',')[1] || input.fileData;
-      const buffer = Buffer.from(base64Data, 'base64');
+        // Converter base64 para Buffer
+        const base64Data = input.fileData.split(',')[1] || input.fileData;
+        const buffer = Buffer.from(base64Data, 'base64');
 
-      // Upload para Supabase Storage
-      const publicUrl = await uploadFile(key, buffer, input.contentType);
+        // Upload para Supabase Storage
+        const publicUrl = await uploadFile(key, buffer, input.contentType);
 
-      // Se isMain === true, zerar is_main das outras imagens
-      if (input.isMain) {
-        await _db
-          .update(propertyImages)
-          .set({ is_main: false })
-          .where(eq(propertyImages.property_id, input.propertyId));
+        // Se isMain === true, zerar is_main das outras imagens
+        if (input.isMain) {
+          await database
+            .update(propertyImages)
+            .set({ is_main: false })
+            .where(eq(propertyImages.property_id, input.propertyId));
+        }
+
+        // Salvar no DB
+        const [image] = await database
+          .insert(propertyImages)
+          .values({
+            property_id: input.propertyId,
+            url: publicUrl,
+            caption: input.caption || null,
+            display_order: 0,
+            is_main: input.isMain ?? false,
+            storage_key: key,
+          })
+          .returning();
+
+        return image;
+      } catch (error) {
+        console.error('[PropertyImages] Upload failed:', error);
+        throw error; // Propagar erro real para o cliente
       }
-
-      // Salvar no DB
-      const [image] = await _db
-        .insert(propertyImages)
-        .values({
-          property_id: input.propertyId,
-          url: publicUrl,
-          caption: input.caption || null,
-          display_order: 0,
-          is_main: input.isMain ?? false,
-          storage_key: key,
-        })
-        .returning();
-
-      return image;
     }),
 
   // Salvar imagem no DB após upload (protegido - admin)
@@ -904,15 +919,20 @@ const propertyImagesRouter = router({
         throw new Error('Apenas administradores podem salvar imagens');
       }
 
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+
       // Se isMain === true, zerar is_main das outras imagens
       if (input.isMain) {
-        await _db
+        await database
           .update(propertyImages)
           .set({ is_main: false })
           .where(eq(propertyImages.property_id, input.propertyId));
       }
 
-      const [image] = await _db
+      const [image] = await database
         .insert(propertyImages)
         .values({
           property_id: input.propertyId,
@@ -938,14 +958,19 @@ const propertyImagesRouter = router({
         throw new Error('Apenas administradores podem definir imagem principal');
       }
 
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+
       // Zerar is_main de todas as imagens do imóvel
-      await _db
+      await database
         .update(propertyImages)
         .set({ is_main: false })
         .where(eq(propertyImages.property_id, input.propertyId));
 
       // Setar is_main da imagem selecionada
-      await _db
+      await database
         .update(propertyImages)
         .set({ is_main: true })
         .where(eq(propertyImages.id, input.imageId));
@@ -964,8 +989,13 @@ const propertyImagesRouter = router({
         throw new Error('Apenas administradores podem deletar imagens');
       }
 
+      const database = await getDb();
+      if (!database) {
+        throw new Error('Database not available');
+      }
+
       // Buscar imagem para pegar storage_key
-      const [image] = await _db
+      const [image] = await database
         .select()
         .from(propertyImages)
         .where(eq(propertyImages.id, input.imageId));
@@ -986,7 +1016,7 @@ const propertyImagesRouter = router({
       }
 
       // Deletar do DB
-      await _db
+      await database
         .delete(propertyImages)
         .where(eq(propertyImages.id, input.imageId));
 
