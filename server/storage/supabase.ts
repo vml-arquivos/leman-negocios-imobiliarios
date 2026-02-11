@@ -3,10 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 // Configuração do Supabase Storage
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const storageBucket = process.env.SUPABASE_STORAGE_BUCKET || "LEMANIMAGENS";
+const storageBucket = process.env.SUPABASE_STORAGE_BUCKET;
+
+if (!storageBucket) {
+  throw new Error("SUPABASE_STORAGE_BUCKET must be set in environment variables");
+}
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
+  throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables");
 }
 
 // Cliente Supabase com SERVICE_ROLE (backend only!)
@@ -83,8 +87,17 @@ export async function uploadFile(
     });
 
   if (error) {
-    console.error("Error uploading file to Supabase Storage:", error);
-    throw new Error(`Failed to upload file: ${error.message}`);
+    console.error('[Storage] Error uploading file to Supabase Storage:', {
+      bucket: storageBucket,
+      key,
+      host: supabaseUrl,
+      error: error.message,
+      details: error,
+    });
+    throw new Error(
+      `Failed to upload file to bucket "${storageBucket}" at ${supabaseUrl}: ${error.message}. ` +
+      `Verifique se o bucket existe (case-sensitive) e se as permissões estão corretas.`
+    );
   }
 
   return getPublicUrl(data.path);

@@ -34,7 +34,7 @@ export const ENV = {
   // Supabase Storage
   supabaseUrl: getOptionalEnv("SUPABASE_URL"),
   supabaseServiceRoleKey: getOptionalEnv("SUPABASE_SERVICE_ROLE_KEY"),
-  supabaseStorageBucket: getOptionalEnv("SUPABASE_STORAGE_BUCKET", "LEMANIMAGENS"),
+  supabaseStorageBucket: getOptionalEnv("SUPABASE_STORAGE_BUCKET"),
 };
 
 // Log de inicialização

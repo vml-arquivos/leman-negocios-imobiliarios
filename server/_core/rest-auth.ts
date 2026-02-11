@@ -70,7 +70,7 @@ router.post("/login", async (req, res) => {
       maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano
     });
 
-    // Atualizar last_signed_in
+    // Atualizar last_sign_in_at
     await db.updateUserLastSignIn(user.id);
 
     console.log("[REST Auth] Login bem-sucedido:", email);

@@ -16,7 +16,7 @@ export const users = pgTable("users", {
   role: varchar("role").default("user"),
   avatar_url: text("avatar_url"),
   active: boolean("active").default(true),
-  last_signed_in: timestamp("last_signed_in").defaultNow(),
+  last_sign_in_at: timestamp("last_sign_in_at").defaultNow(),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
