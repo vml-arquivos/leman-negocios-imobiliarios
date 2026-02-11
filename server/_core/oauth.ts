@@ -33,7 +33,7 @@ export function registerOAuthRoutes(app: Express) {
         name: userInfo.name || null,
         email: userInfo.email ?? null,
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-        last_signed_in: new Date(),
+        last_sign_in_at: new Date(),
       });
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {

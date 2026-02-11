@@ -69,7 +69,7 @@ const authRouter = router({
         maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano
       });
       
-      // Atualizar last_signed_in
+      // Atualizar last_sign_in_at
       await db.db.updateUserLastSignIn(user.id);
       
       console.log("[Auth] Login bem-sucedido:", input.email);
