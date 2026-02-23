@@ -11,6 +11,35 @@ import { trpc } from "@/lib/trpc";
 import { formatCurrency, formatRent } from "@/lib/utils-types";
 import { Star } from "lucide-react";
 
+
+function getCoverUrl(property: any): string | null {
+  if (!property) return null;
+  const direct = property.main_image ?? property.mainImage ?? property.coverImage ?? property.main_image_url;
+  if (typeof direct === 'string' && direct.trim()) return direct;
+
+  const imgs = property.images ?? property.imageUrls ?? property.photos;
+  // images may arrive as array, JSON string, or array of objects
+  if (Array.isArray(imgs)) {
+    const first = imgs[0];
+    if (typeof first === 'string' && first.trim()) return first;
+    if (first && typeof first === 'object' && typeof first.url === 'string' && first.url.trim()) return first.url;
+    return null;
+  }
+  if (typeof imgs === 'string' && imgs.trim()) {
+    try {
+      const parsed = JSON.parse(imgs);
+      if (Array.isArray(parsed) && parsed.length) {
+        const first = parsed[0];
+        if (typeof first === 'string' && first.trim()) return first;
+        if (first && typeof first === 'object' && typeof first.url === 'string' && first.url.trim()) return first.url;
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return null;
+}
+
 function FeaturedProperties() {
   const { data: properties, isLoading } = trpc.properties.featured.useQuery({ limit: 6 });
 
@@ -43,7 +72,7 @@ function FeaturedProperties() {
                 <Card className="overflow-hidden group hover:shadow-2xl transition-shadow duration-300 cursor-pointer">
                 <div className="relative h-64 bg-muted overflow-hidden">
                   {(() => {
-                    const imageUrl = property.images || (property.images ? JSON.parse(property.images)[0]?.url : null);
+                    const imageUrl = getCoverUrl(property);
                     return imageUrl ? (
                       <img 
                         src={imageUrl} 
@@ -148,7 +177,7 @@ function AllProperties() {
               <Card className="overflow-hidden group hover:shadow-2xl transition-shadow duration-300 cursor-pointer">
               <div className="relative h-64 bg-muted overflow-hidden">
                 {(() => {
-                  const imageUrl = property.images || (property.images ? JSON.parse(property.images)[0]?.url : null);
+                  const imageUrl = getCoverUrl(property);
                   return imageUrl ? (
                     <img 
                       src={imageUrl} 
