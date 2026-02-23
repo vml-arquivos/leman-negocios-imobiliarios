@@ -1,428 +1,361 @@
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Building2, 
-  Users, 
-  TrendingUp, 
-  DollarSign,
-  Target,
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  Building2,
+  Users,
   Flame,
   Snowflake,
-  ThermometerSun,
   Activity,
-  ShoppingCart,
-  Home as HomeIcon,
-  Key,
-  AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  MapPin,
+  Phone,
 } from "lucide-react";
-import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
+
+type AnyRecord = Record<string, any>;
+
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDayLabel(d: Date) {
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function formatDateTime(value: unknown) {
+  const d = toDate(value);
+  if (!d) return "—";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function pickPhone(lead: AnyRecord) {
+  return lead.telefone || lead.phone || lead.whatsapp || "—";
+}
+
+function pickStage(lead: AnyRecord) {
+  return lead.stage || lead.status || "—";
+}
+
+function stageBadgeVariant(stage: string) {
+  const s = String(stage).toLowerCase();
+  if (s.includes("quente") || s.includes("hot")) return "default";
+  if (s.includes("morno")) return "secondary";
+  if (s.includes("frio")) return "outline";
+  return "secondary";
+}
 
 export default function Dashboard() {
-  const [, setLocation] = useLocation();
   const { data: properties } = trpc.properties.list.useQuery();
   const { data: leads } = trpc.leads.list.useQuery();
   const { data: inactiveLeads } = trpc.leads.getInactiveHotLeads.useQuery();
 
-  // Estatísticas gerais
-  const totalProperties = properties?.length || 0;
-  const totalLeads = leads?.length || 0;
-  const activeProperties = properties?.filter(p => p.status === 'disponivel').length || 0;
-  const hotLeads = leads?.filter(l => l.stage === 'quente').length || 0;
+  const props = (properties as AnyRecord[] | undefined) ?? [];
+  const leadsArr = (leads as AnyRecord[] | undefined) ?? [];
 
-  // Análise por tipo de cliente
-  const leadsByClientType = leads?.reduce((acc, lead) => {
-    const type = lead.interest_type || 'comprador';
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
+  // KPIs
+  const totalProperties = props.length;
+  const activeProperties = props.filter((p) => String(p.status) === "disponivel").length;
 
-  // Análise por qualificação
-  const leadsByQualification = leads?.reduce((acc, lead) => {
-    const qual = lead.stage || 'nao_qualificado';
-    acc[qual] = (acc[qual] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
+  const totalLeads = leadsArr.length;
+  const hotLeads = leadsArr.filter((l) => String(pickStage(l)).toLowerCase() === "quente").length;
+  const inactiveHot = (inactiveLeads as AnyRecord[] | undefined)?.length ?? 0;
 
-  // Análise por estágio
-  const leadsByStage = leads?.reduce((acc, lead) => {
-    acc[lead.stage] = (acc[lead.stage] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
+  // Trend: leads per day (last 14 days)
+  const now = new Date();
+  const daysBack = 14;
+  const start = new Date(now);
+  start.setDate(now.getDate() - (daysBack - 1));
+  start.setHours(0, 0, 0, 0);
 
-  // Análise por origem
-  const leadsBySource = leads?.reduce((acc, lead) => {
-    const source = lead.source || 'site';
-    acc[source] = (acc[source] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
+  const dayBuckets = new Map<string, { day: string; total: number; hot: number }>();
+  for (let i = 0; i < daysBack; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    dayBuckets.set(key, { day: formatDayLabel(d), total: 0, hot: 0 });
+  }
 
-  // Leads recentes
-  const recentLeads = leads?.slice(0, 5) || [];
+  for (const lead of leadsArr) {
+    const d = toDate(lead.created_at ?? lead.createdAt ?? lead.createdAt);
+    if (!d) continue;
+    const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10);
+    const bucket = dayBuckets.get(key);
+    if (!bucket) continue;
+    bucket.total += 1;
+    if (String(pickStage(lead)).toLowerCase() === "quente") bucket.hot += 1;
+  }
 
-  // Valor total de imóveis disponíveis
-  const totalPropertyValue = properties
-    ?.filter(p => p.status === 'disponivel')
-    .reduce((sum, p) => sum + (p.price || 0), 0) || 0;
+  const leadsTrend = Array.from(dayBuckets.values());
 
-  // Configurações de visualização
-  const clientTypeConfig = {
-    comprador: { label: "Compradores", icon: ShoppingCart, color: "text-green-600", bg: "bg-green-50" },
-    locatario: { label: "Locatários", icon: HomeIcon, color: "text-blue-600", bg: "bg-blue-50" },
-    proprietario: { label: "Proprietários", icon: Key, color: "text-purple-600", bg: "bg-purple-50" },
-  };
+  // Top neighborhoods (simple)
+  const neighborhoodCount = new Map<string, number>();
+  for (const p of props) {
+    const n = String(p.neighborhood || "").trim();
+    if (!n) continue;
+    neighborhoodCount.set(n, (neighborhoodCount.get(n) || 0) + 1);
+  }
+  const topNeighborhoods = Array.from(neighborhoodCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count]) => ({ name, count }));
 
-  const qualificationConfig = {
-    quente: { label: "Quente", icon: Flame, color: "text-red-600", bg: "bg-red-50" },
-    morno: { label: "Morno", icon: ThermometerSun, color: "text-orange-600", bg: "bg-orange-50" },
-    frio: { label: "Frio", icon: Snowflake, color: "text-blue-600", bg: "bg-blue-50" },
-    nao_qualificado: { label: "Não Qualificado", icon: Activity, color: "text-gray-600", bg: "bg-gray-50" },
-  };
-
-  const stageLabels: Record<string, string> = {
-    novo: "Novo",
-    contato_inicial: "Contato Inicial",
-    qualificado: "Qualificado",
-    visita_agendada: "Visita Agendada",
-    visita_realizada: "Visita Realizada",
-    proposta: "Proposta",
-    negociacao: "Negociação",
-    fechado_ganho: "Fechado (Ganho)",
-    fechado_perdido: "Fechado (Perdido)",
-    sem_interesse: "Sem Interesse",
-  };
-
-  const sourceLabels: Record<string, string> = {
-    site: "Site",
-    whatsapp: "WhatsApp",
-    instagram: "Instagram",
-    facebook: "Facebook",
-    indicacao: "Indicação",
-    portal_zap: "ZAP Imóveis",
-    portal_vivareal: "Viva Real",
-    portal_olx: "OLX",
-    google: "Google",
-    outro: "Outro",
-  };
+  // Recent leads
+  const recentLeads = [...leadsArr]
+    .sort((a, b) => {
+      const da = toDate(a.created_at ?? a.createdAt)?.getTime() ?? 0;
+      const db = toDate(b.created_at ?? b.createdAt)?.getTime() ?? 0;
+      return db - da;
+    })
+    .slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-muted/30">
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: "Montserrat, sans-serif" }}>
-          Dashboard CRM
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Visão geral completa do funil de vendas e análise inteligente de clientes
-        </p>
-      </div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
+            Visão Geral
+          </h1>
+          <p className="text-sm text-white/60 mt-1">
+            Métricas do funil, estoque de imóveis e performance do atendimento.
+          </p>
+        </div>
 
-      {/* Alerta de Follow-up */}
-      {inactiveLeads && inactiveLeads.length > 0 && (
-        <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-l-red-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-700">
-              <AlertTriangle className="h-6 w-6" />
-              Atenção: Clientes Quentes Precisam de Follow-up!
-            </CardTitle>
-            <CardDescription>
-              {inactiveLeads.length} cliente(s) quente(s) sem contato há mais de 3 dias
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Clientes com alta probabilidade de conversão estão sem atenção. Ação imediata recomendada.
-                </p>
-                <div className="flex gap-4 text-sm">
-                  <span className="text-red-600 font-semibold">
-                    🚨 {inactiveLeads.filter(l => l.daysSinceLastContact >= 7).length} Urgente (7+ dias)
-                  </span>
-                  <span className="text-orange-600 font-semibold">
-                    ⚠️ {inactiveLeads.filter(l => l.daysSinceLastContact >= 5 && l.daysSinceLastContact < 7).length} Atenção (5-6 dias)
-                  </span>
-                  <span className="text-yellow-600 font-semibold">
-                    ⏰ {inactiveLeads.filter(l => l.daysSinceLastContact >= 3 && l.daysSinceLastContact < 5).length} Monitorar (3-4 dias)
-                  </span>
-                </div>
-              </div>
-              <Button 
-                onClick={() => setLocation('/admin/followup')}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Ver Clientes
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Cards de Estatísticas Principais */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Imóveis</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProperties}</div>
-            <p className="text-xs text-muted-foreground">
-              {activeProperties} disponíveis
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalLeads}</div>
-            <p className="text-xs text-muted-foreground">
-              {hotLeads} leads quentes
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor em Carteira</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {(totalPropertyValue / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Imóveis disponíveis
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalLeads > 0 ? (((leadsByStage['fechado_ganho'] || 0) / totalLeads) * 100).toFixed(1) : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {leadsByStage['fechado_ganho'] || 0} fechados
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Análise de Clientes */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Análise por Tipo de Cliente */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Perfil de Clientes</CardTitle>
-            <CardDescription>Distribuição por tipo de cliente</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(clientTypeConfig).map(([type, config]) => {
-              const count = leadsByClientType[type] || 0;
-              const Icon = config.icon;
-              const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
-              
-              return (
-                <div key={type} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${config.bg}`}>
-                      <Icon className={`h-4 w-4 ${config.color}`} />
-                    </div>
-                    <span className="font-medium">{config.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">{count}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({percentage.toFixed(0)}%)
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            {totalLeads === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum lead cadastrado ainda
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Análise por Qualificação */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Qualificação de Leads</CardTitle>
-            <CardDescription>Temperatura e potencial de conversão</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(qualificationConfig).map(([qual, config]) => {
-              const count = leadsByQualification[qual] || 0;
-              const Icon = config.icon;
-              const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
-              
-              return (
-                <div key={qual} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${config.bg}`}>
-                      <Icon className={`h-4 w-4 ${config.color}`} />
-                    </div>
-                    <span className="font-medium">{config.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">{count}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({percentage.toFixed(0)}%)
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-            {totalLeads === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum lead cadastrado ainda
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Funil de Vendas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Funil de Vendas</CardTitle>
-          <CardDescription>Distribuição de leads por estágio do pipeline</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(leadsByStage)
-              .filter(([stage]) => !['fechado_perdido', 'sem_interesse'].includes(stage))
-              .map(([stage, count]) => (
-                <div key={stage} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-primary">{count}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {stageLabels[stage] || stage}
-                  </div>
-                </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Origem dos Leads */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Origem dos Leads</CardTitle>
-          <CardDescription>De onde vêm seus clientes potenciais</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(leadsBySource)
-              .sort(([, a], [, b]) => (b as number) - (a as number))
-              .slice(0, 5)
-              .map(([source, count]) => (
-                <div key={source} className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold">{count as number}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {sourceLabels[source] || source}
-                  </div>
-                </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Leads Recentes */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Leads Recentes</CardTitle>
-            <CardDescription>Últimos leads cadastrados no sistema</CardDescription>
-          </div>
-          <Link href="/admin/leads">
-            <Button variant="outline" size="sm">Ver Todos</Button>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/properties/new">
+            <Button className="bg-orange-500 hover:bg-orange-400 text-black">
+              Cadastrar imóvel <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </Link>
+          <Link href="/admin/leads">
+            <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 text-white">
+              Ver leads
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* KPI grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-white/70 font-medium flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-orange-300" />
+              Imóveis cadastrados
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold text-white">{totalProperties}</div>
+            <div className="text-xs text-white/60 mt-1">
+              {activeProperties} disponíveis na vitrine
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-white/70 font-medium flex items-center gap-2">
+              <Users className="h-4 w-4 text-cyan-300" />
+              Leads totais
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold text-white">{totalLeads}</div>
+            <div className="text-xs text-white/60 mt-1">Entradas acumuladas</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-white/70 font-medium flex items-center gap-2">
+              <Flame className="h-4 w-4 text-pink-300" />
+              Leads quentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold text-white">{hotLeads}</div>
+            <div className="text-xs text-white/60 mt-1">Alta intenção (quente)</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-white/70 font-medium flex items-center gap-2">
+              <Snowflake className="h-4 w-4 text-blue-300" />
+              Quentes inativos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold text-white">{inactiveHot}</div>
+            <div className="text-xs text-white/60 mt-1">Sem interação recente</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <Card className="bg-white/5 border-white/10 xl:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white flex items-center gap-2">
+              <Activity className="h-5 w-5 text-orange-300" />
+              Entrada de leads (14 dias)
+            </CardTitle>
+            <p className="text-sm text-white/60">
+              Total de leads por dia e recorte de leads quentes.
+            </p>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ChartContainer
+              className="h-[260px] w-full"
+              config={{
+                total: { label: "Leads", color: "hsl(var(--chart-1))" },
+                hot: { label: "Quentes", color: "hsl(var(--chart-3))" },
+              }}
+            >
+              <ResponsiveContainer>
+                <AreaChart data={leadsTrend} margin={{ left: 8, right: 8 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }} axisLine={false} tickLine={false} width={28} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.18} strokeWidth={2} />
+                  <Area type="monotone" dataKey="hot" stroke="var(--color-hot)" fill="var(--color-hot)" fillOpacity={0.14} strokeWidth={2} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/5 border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-cyan-300" />
+              Bairros com mais imóveis
+            </CardTitle>
+            <p className="text-sm text-white/60">Top 6 por estoque cadastrado.</p>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ChartContainer
+              className="h-[260px] w-full"
+              config={{ count: { label: "Imóveis", color: "hsl(var(--chart-2))" } }}
+            >
+              <ResponsiveContainer>
+                <BarChart data={topNeighborhoods} margin={{ left: 8, right: 8 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    height={44}
+                    angle={-20}
+                    textAnchor="end"
+                  />
+                  <YAxis tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }} axisLine={false} tickLine={false} width={28} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="var(--color-count)" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent leads */}
+      <Card className="bg-white/5 border-white/10">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-white flex items-center gap-2">
+            <Users className="h-5 w-5 text-orange-300" />
+            Leads recentes
+          </CardTitle>
+          <p className="text-sm text-white/60">
+            Últimas entradas para priorizar atendimento e follow-up.
+          </p>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentLeads.map((lead) => {
-              const qualConfig = qualificationConfig[lead.stage as keyof typeof qualificationConfig];
-              const QualIcon = qualConfig?.icon || Activity;
-              const clientConfig = clientTypeConfig[lead.interest_type as keyof typeof clientTypeConfig];
-              
-              return (
-                <div key={lead.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-lg ${qualConfig?.bg || 'bg-gray-50'}`}>
-                      <QualIcon className={`h-5 w-5 ${qualConfig?.color || 'text-gray-600'}`} />
-                    </div>
-                    <div>
-                      <div className="font-medium">{lead.name}</div>
-                      <div className="text-sm text-muted-foreground">{lead.email}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-xs px-2 py-1 rounded bg-muted">
-                      {clientConfig?.label || lead.interest_type}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium">{qualConfig?.label || lead.stage}</div>
-                      <div className="text-xs text-muted-foreground">{stageLabels[lead.stage]}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {recentLeads.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Nenhum lead cadastrado ainda
-              </p>
-            )}
+        <CardContent className="pt-4">
+          <div className="overflow-hidden rounded-xl border border-white/10">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-white/10">
+                  <TableHead className="text-white/60">Lead</TableHead>
+                  <TableHead className="text-white/60">Telefone</TableHead>
+                  <TableHead className="text-white/60">Qualificação</TableHead>
+                  <TableHead className="text-white/60">Criado</TableHead>
+                  <TableHead className="text-white/60 text-right">Ação</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentLeads.length === 0 ? (
+                  <TableRow className="border-white/10">
+                    <TableCell colSpan={5} className="text-white/60 py-8 text-center">
+                      Nenhum lead encontrado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentLeads.map((lead) => {
+                    const stage = String(pickStage(lead));
+                    return (
+                      <TableRow key={String(lead.id)} className="border-white/10 hover:bg-white/5">
+                        <TableCell className="text-white">
+                          <div className="font-medium">{lead.name || "Sem nome"}</div>
+                          <div className="text-xs text-white/50">{lead.email || "—"}</div>
+                        </TableCell>
+                        <TableCell className="text-white/80">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-white/40" />
+                            {pickPhone(lead)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={stageBadgeVariant(stage)} className="bg-white/10 text-white border-white/10">
+                            {stage}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-white/70">{formatDateTime(lead.created_at ?? lead.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <Link href="/admin/leads">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-white/10 bg-transparent hover:bg-white/5 text-white"
+                            >
+                              Abrir
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
-
-      {/* Ações Rápidas */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Link href="/admin/properties">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Gerenciar Imóveis
-              </CardTitle>
-              <CardDescription>
-                Adicionar, editar ou remover imóveis do portfólio
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/admin/leads">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Gerenciar Leads
-              </CardTitle>
-              <CardDescription>
-                Acompanhar e qualificar leads no pipeline de vendas
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-      </div>
-    </div>
     </div>
   );
 }
