@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import AdminLayout from "@/components/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings as SettingsIcon, Users, Shield, Palette, Bell, FileText } from "lucide-react";
 import UserManagement from "./UserManagement";
@@ -15,7 +14,6 @@ export default function Settings() {
   const defaultTab = searchParams.get("tab") || "users";
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -74,6 +72,5 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
-  );
+      );
 }
