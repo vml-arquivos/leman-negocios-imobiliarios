@@ -4,6 +4,7 @@ import { ENV } from "./_core/env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { eq, desc, asc, and, or, like, gte, lte, sql } from "drizzle-orm";
+import { mapPropertyInputToDb, mapLeadInputToDb } from "./_core/mappers";
 
 // ============================================
 import {
@@ -12,6 +13,8 @@ import {
   leads,
   financingSimulations,
   rentalPayments,
+  n8nConversas,
+  n8nMensagens,
 } from "../drizzle/schema";
 
 let _client: postgres.Sql | null = null;
@@ -26,8 +29,8 @@ function ensureClient() {
   }
 
   // Adicionar parâmetro pgbouncer=true se usando Supabase Transaction Pooler (porta 6543)
-  const connectionUrl = url.includes('6543') && !url.includes('pgbouncer=true') 
-    ? `${url}${url.includes('?') ? '&' : '?'}pgbouncer=true` 
+  const connectionUrl = url.includes('6543') && !url.includes('pgbouncer=true')
+    ? `${url}${url.includes('?') ? '&' : '?'}pgbouncer=true`
     : url;
 
   _client = postgres(connectionUrl, {
@@ -36,7 +39,7 @@ function ensureClient() {
     idle_timeout: 30,
     connect_timeout: 10,
   });
-  
+
   return _client;
 }
 
@@ -61,25 +64,25 @@ export const db = {
   getUserByEmail: async (email: string): Promise<any> => {
     const database = await getDb();
     if (!database) return null;
-    
+
     const result = await database
       .select()
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
-    
+
     return result[0] || null;
   },
 
-  createUser: async (userData: InsertUser): Promise<any> => {
+  createUser: async (userData: any): Promise<any> => {
     const database = await getDb();
     if (!database) throw new Error("Database not available");
-    
+
     const result = await database
       .insert(users)
       .values(userData)
       .returning();
-    
+
     return result[0];
   },
 
@@ -90,16 +93,11 @@ export const db = {
         console.warn('[DB] Database not available, skipping last_sign_in_at update');
         return;
       }
-      
+
       const now = new Date();
-      const updateData: any = {
-        last_sign_in_at: now,
-        updated_at: now,
-      };
-      
       await database
         .update(users)
-        .set(updateData)
+        .set({ last_sign_in_at: now, updated_at: now })
         .where(eq(users.id, userId));
     } catch (error) {
       console.error('[DB] Error updating last_sign_in_at:', error);
@@ -107,7 +105,7 @@ export const db = {
     }
   },
 
-  listUsers: async (): Promise<User[]> => {
+  listUsers: async (): Promise<any[]> => {
     const database = await getDb();
     if (!database) return [];
 
@@ -122,18 +120,18 @@ export const db = {
   getUserById: async (id: number): Promise<any> => {
     const database = await getDb();
     if (!database) return null;
-    
+
     const result = await database
       .select()
       .from(users)
       .where(eq(users.id, id))
       .limit(1);
-    
+
     return result[0] || null;
   },
 };
 
-export async function upsertUser(user: InsertUser): Promise<void> {
+export async function upsertUser(user: any): Promise<void> {
   const database = await getDb();
   if (!database) return;
 
@@ -157,42 +155,42 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 }
 
-export async function getUserByOpenId(openId: string) {
-  const database = await getDb();
-  if (!database) return null;
-
-  const result = await database
-    .select()
-    .from(users)
-    .where(eq(users.open_id, openId))
-    .limit(1);
-
-  return result[0] || null;
-}
-
 // ============================================
 // PROPERTIES - Funções de Imóveis
 // ============================================
 
-export async function createProperty(property: any): Promise<any> {
+/**
+ * Cria um imóvel mapeando o payload camelCase para snake_case antes do insert.
+ * @param property - Payload camelCase vindo do router
+ * @param userId   - ID do usuário autenticado (created_by)
+ */
+export async function createProperty(property: any, userId?: number): Promise<any> {
   const database = await getDb();
   if (!database) throw new Error("Database not available");
 
+  const mapped = mapPropertyInputToDb(property, userId ?? property.createdBy);
+
   const result = await database
     .insert(properties)
-    .values(property)
+    .values(mapped as any)
     .returning();
 
   return result[0];
 }
 
+/**
+ * Atualiza um imóvel mapeando o payload camelCase para snake_case antes do update.
+ */
 export async function updateProperty(id: number, data: any): Promise<any> {
   const database = await getDb();
   if (!database) throw new Error("Database not available");
 
+  const mapped = mapPropertyInputToDb(data);
+  mapped.updated_at = new Date();
+
   const result = await database
     .update(properties)
-    .set({ ...data, updated_at: new Date() })
+    .set(mapped)
     .where(eq(properties.id, id))
     .returning();
 
@@ -252,16 +250,16 @@ export async function listProperties(params: {
     conditions.push(eq(properties.neighborhood, params.neighborhood));
   }
   if (params.minPrice) {
-    conditions.push(gte(properties.sale_price, params.minPrice));
+    conditions.push(gte(properties.sale_price, String(params.minPrice)));
   }
   if (params.maxPrice) {
-    conditions.push(lte(properties.sale_price, params.maxPrice));
+    conditions.push(lte(properties.sale_price, String(params.maxPrice)));
   }
   if (params.minArea) {
-    conditions.push(gte(properties.area, params.minArea));
+    conditions.push(gte(properties.total_area, String(params.minArea)));
   }
   if (params.maxArea) {
-    conditions.push(lte(properties.area, params.maxArea));
+    conditions.push(lte(properties.total_area, String(params.maxArea)));
   }
   if (params.bedrooms) {
     conditions.push(eq(properties.bedrooms, params.bedrooms));
@@ -299,10 +297,7 @@ export async function listProperties(params: {
         .where(eq(propertyImages.property_id, property.id))
         .orderBy(desc(propertyImages.is_main), asc(propertyImages.display_order));
 
-      // Retornar URLs das imagens como array de strings
       const imageUrls = images.map(img => img.url);
-
-      // Fallback: se não houver imagens em property_images, usar properties.images (legado)
       const finalImages = imageUrls.length > 0 ? imageUrls : (property.images as any) || [];
 
       return {
@@ -327,36 +322,48 @@ export async function listProperties(params: {
 // LEADS - Funções de Leads
 // ============================================
 
+/**
+ * Cria um lead mapeando o payload camelCase para snake_case antes do insert.
+ * O campo `telefone` é NOT NULL e UNIQUE — o mapper valida isso.
+ */
 export async function createLead(lead: any): Promise<any> {
   const database = await getDb();
   if (!database) throw new Error("Database not available");
 
+  const mapped = mapLeadInputToDb(lead);
+
   const result = await database
     .insert(leads)
-    .values(lead)
+    .values(mapped as any)
     .returning();
 
   return result[0];
 }
 
+/**
+ * Atualiza um lead mapeando o payload camelCase para snake_case antes do update.
+ */
 export async function updateLead(id: number, data: any): Promise<any> {
   const database = await getDb();
   if (!database) throw new Error("Database not available");
 
+  const mapped = mapLeadInputToDb(data);
+  mapped.ultima_interacao = new Date();
+
   const result = await database
     .update(leads)
-    .set({ ...data, updated_at: new Date() })
+    .set(mapped)
     .where(eq(leads.id, id))
     .returning();
 
   return result[0];
 }
 
-export async function listLeads(params: { 
-  limit?: number; 
-  offset?: number; 
-  stage?: string; 
-  source?: string;
+export async function listLeads(params: {
+  limit?: number;
+  offset?: number;
+  status?: string;   // campo real no DB
+  origem?: string;   // campo real no DB
   assignedTo?: number;
   search?: string;
 }) {
@@ -365,11 +372,12 @@ export async function listLeads(params: {
 
   const conditions = [];
 
-  if (params.stage) {
-    conditions.push(eq(leads.stage, params.stage as any));
+  // Usar status (não stage) e origem (não source) — campos reais do schema
+  if (params.status) {
+    conditions.push(eq(leads.status, params.status as any));
   }
-  if (params.source) {
-    conditions.push(eq(leads.source, params.source as any));
+  if (params.origem) {
+    conditions.push(eq(leads.origem, params.origem as any));
   }
   if (params.assignedTo) {
     conditions.push(eq(leads.assigned_to, params.assignedTo));
@@ -379,7 +387,7 @@ export async function listLeads(params: {
       or(
         like(leads.name, `%${params.search}%`),
         like(leads.email, `%${params.search}%`),
-        like(leads.phone, `%${params.search}%`)
+        like(leads.telefone, `%${params.search}%`)
       )
     );
   }
@@ -416,6 +424,39 @@ export async function getLeadById(id: number): Promise<any> {
     .limit(1);
 
   return result[0] || null;
+}
+
+export async function getAllLeads(params?: any) {
+  const database = await getDb();
+  if (!database) return [];
+
+  return await database
+    .select()
+    .from(leads)
+    .orderBy(desc(leads.created_at));
+}
+
+/**
+ * Busca leads por status (campo real no DB, equivale ao antigo "stage").
+ */
+export async function getLeadsByStage(stage: string) {
+  const database = await getDb();
+  if (!database) return [];
+
+  return await database
+    .select()
+    .from(leads)
+    .where(eq(leads.status, stage as any))
+    .orderBy(desc(leads.created_at));
+}
+
+export async function deleteLead(id: number): Promise<void> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+
+  await database
+    .delete(leads)
+    .where(eq(leads.id, id));
 }
 
 // ============================================
@@ -559,41 +600,13 @@ export async function listMensagens(conversaId: number) {
   return await database
     .select()
     .from(n8nMensagens)
-    .where(eq(n8nMensagens.conversaId, conversaId))
+    .where(eq(n8nMensagens.conversa_id, conversaId))
     .orderBy(n8nMensagens.timestamp);
 }
 
-
 // ============================================
-// LEAD FUNCTIONS (MISSING)
+// INTERACTION FUNCTIONS (STUB)
 // ============================================
-
-export async function getLeadsByStage(stage: string) {
-  const database = await getDb();
-  if (!database) return [];
-
-  return await database
-    .select()
-    .from(leads)
-    .where(eq(leads.stage, stage as any))
-    .orderBy(desc(leads.created_at));
-}
-
-export async function deleteLead(id: number): Promise<void> {
-  const database = await getDb();
-  if (!database) throw new Error("Database not available");
-
-  await database
-    .delete(leads)
-    .where(eq(leads.id, id));
-}
-
-// ============================================
-// INTERACTION FUNCTIONS (MISSING)
-// ============================================
-
-// Nota: A tabela 'interactions' não está no schema atual do Drizzle
-// Estas funções retornam arrays vazios até a tabela ser adicionada
 
 export async function getInteractionsByLeadId(leadId: number) {
   // TODO: Adicionar tabela 'interactions' ao schema
@@ -607,56 +620,72 @@ export async function createInteraction(data: any) {
   return null;
 }
 
-
 // ============================================
-// BLOG FUNCTIONS (MISSING)
+// BLOG FUNCTIONS (STUB)
 // ============================================
-
-export async function getAllLeads(params?: any) {
-  const database = await getDb();
-  if (!database) return [];
-
-  return await database
-    .select()
-    .from(leads)
-    .orderBy(desc(leads.created_at));
-}
 
 export async function listBlogPosts(params?: any) {
   // TODO: Adicionar tabela 'blog_posts' ao schema
   console.warn("[Database] blog_posts table not implemented yet");
-  return [];
+  return { items: [], total: 0 };
 }
 
 export async function getBlogPostById(id: number) {
-  // TODO: Adicionar tabela 'blog_posts' ao schema
   console.warn("[Database] blog_posts table not implemented yet");
   return null;
 }
 
 export async function getBlogPostBySlug(slug: string) {
-  // TODO: Adicionar tabela 'blog_posts' ao schema
   console.warn("[Database] blog_posts table not implemented yet");
   return null;
 }
 
 export async function createBlogPost(data: any) {
-  // TODO: Adicionar tabela 'blog_posts' ao schema
   console.warn("[Database] blog_posts table not implemented yet");
   return null;
 }
 
+export async function updateBlogPost(id: number, data: any) {
+  console.warn("[Database] blog_posts table not implemented yet");
+  return null;
+}
 
-// --- STUBS PARA CORREÇÃO DE BUILD (FASE 2) ---
-// Adicione isto ao final do arquivo server/db.ts
+export async function deleteBlogPost(id: number) {
+  console.warn("[Database] blog_posts table not implemented yet");
+}
+
+export async function getAllBlogCategories() {
+  console.warn("[Database] blog_categories table not implemented yet");
+  return [];
+}
+
+export async function createBlogCategory(data: any) {
+  console.warn("[Database] blog_categories table not implemented yet");
+  return null;
+}
+
+// ============================================
+// SITE SETTINGS (STUB)
+// ============================================
+
+export async function getSiteSettings() {
+  console.warn("[Database] site_settings table not implemented yet");
+  return {};
+}
+
+export async function updateSiteSettings(data: any) {
+  console.warn("[Database] site_settings table not implemented yet");
+}
+
+// ============================================
+// CLIENT PROFILE STUBS
+// ============================================
 
 export async function getUnifiedClients() {
-  // Retorna lista vazia para não quebrar a UI de Admin
   return [];
 }
 
 export async function getClientProfile(id: number) {
-  // Retorna null ou objeto vazio
   return null;
 }
 
@@ -668,10 +697,169 @@ export async function getClientInteractions(id: number) {
   return [];
 }
 
-// Helper para compatibilidade de imagem no frontend
+// ============================================
+// HELPER PARA IMAGEM DE CAPA
+// ============================================
+
 export function getCoverImage(property: any): string {
   if (property.images && Array.isArray(property.images) && property.images.length > 0) {
     return typeof property.images[0] === 'string' ? property.images[0] : property.images[0].url;
   }
-  return '/imoveis/padrao.jpg'; // Placeholder
+  return '/imoveis/padrao.jpg';
 }
+
+// ============================================
+// WEBHOOK LOG (STUB)
+// ============================================
+
+export async function createWebhookLog(data: any) {
+  // TODO: Adicionar tabela 'webhook_logs' ao schema se necessário
+  console.log("[WebhookLog]", JSON.stringify(data));
+  return null;
+}
+
+// ============================================
+// OWNERS (PROPRIETÁRIOS) STUBS
+// ============================================
+
+export async function getAllOwners(): Promise<any[]> {
+  const database = await getDb();
+  if (!database) return [];
+  // Usa a tabela landlords como stub de owners
+  const { landlords } = await import("../drizzle/schema");
+  return await database.select().from(landlords).orderBy(desc(landlords.created_at));
+}
+
+export async function getOwnerById(id: number): Promise<any> {
+  const database = await getDb();
+  if (!database) return null;
+  const { landlords } = await import("../drizzle/schema");
+  const result = await database.select().from(landlords).where(eq(landlords.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function searchOwners(query: string): Promise<any[]> {
+  const database = await getDb();
+  if (!database) return [];
+  const { landlords } = await import("../drizzle/schema");
+  return await database
+    .select()
+    .from(landlords)
+    .where(or(like(landlords.name, `%${query}%`), like(landlords.email, `%${query}%`)))
+    .limit(20);
+}
+
+export async function createOwner(data: any): Promise<any> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  const { landlords } = await import("../drizzle/schema");
+  const mapped: any = {
+    name: data.name,
+    cpf_cnpj: data.cpfCnpj ?? data.cpf_cnpj,
+    email: data.email,
+    phone: data.phone ?? data.whatsapp,
+    status: data.active === false ? "inactive" : "active",
+  };
+  const result = await database.insert(landlords).values(mapped).returning();
+  return result[0];
+}
+
+export async function updateOwner(id: number, data: any): Promise<any> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  const { landlords } = await import("../drizzle/schema");
+  const mapped: any = {};
+  if (data.name !== undefined)    mapped.name = data.name;
+  if (data.email !== undefined)   mapped.email = data.email;
+  if (data.phone !== undefined)   mapped.phone = data.phone;
+  if (data.cpfCnpj !== undefined) mapped.cpf_cnpj = data.cpfCnpj;
+  if (data.active !== undefined)  mapped.status = data.active ? "active" : "inactive";
+  const result = await database.update(landlords).set(mapped).where(eq(landlords.id, id)).returning();
+  return result[0];
+}
+
+export async function deleteOwner(id: number): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  const { landlords } = await import("../drizzle/schema");
+  await database.delete(landlords).where(eq(landlords.id, id));
+}
+
+// ============================================
+// AI / CONTEXT STUBS
+// ============================================
+
+export async function saveAiContext(data: any) {
+  console.warn("[Database] ai_context table not implemented yet");
+  return null;
+}
+
+export async function getAiHistoryBySession(sessionId: string) {
+  console.warn("[Database] ai_context table not implemented yet");
+  return [];
+}
+
+export async function getAiHistoryByPhone(phone: string) {
+  console.warn("[Database] ai_context table not implemented yet");
+  return [];
+}
+
+export async function createMessageBuffer(data: any) {
+  console.warn("[Database] message_buffer table not implemented yet");
+  return null;
+}
+
+export async function upsertLeadFromWhatsApp(data: any) {
+  // Tenta encontrar pelo telefone e criar/atualizar
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  const phone = data.phone ?? data.whatsapp ?? data.telefone;
+  if (!phone) throw new Error("telefone obrigatório para upsertLeadFromWhatsApp");
+  const existing = await database.select().from(leads).where(eq(leads.telefone, phone)).limit(1);
+  if (existing.length > 0) {
+    const mapped = mapLeadInputToDb({ ...data, telefone: phone });
+    mapped.ultima_interacao = new Date();
+    const result = await database.update(leads).set(mapped as any).where(eq(leads.id, existing[0].id)).returning();
+    return result[0];
+  } else {
+    const mapped = mapLeadInputToDb({ ...data, telefone: phone, stage: data.stage ?? "novo" });
+    const result = await database.insert(leads).values(mapped as any).returning();
+    return result[0];
+  }
+}
+
+// ============================================
+// WEBHOOK LOGS (LISTA)
+// ============================================
+
+export async function getWebhookLogs(params?: any) {
+  console.warn("[Database] webhook_logs table not implemented yet");
+  return { items: [], total: 0 };
+}
+
+// ============================================
+// CLIENT INTEREST STUB
+// ============================================
+
+export async function createClientInterest(data: any) {
+  console.warn("[Database] client_interest table not implemented yet");
+  return null;
+}
+
+export async function getClientProperties(clientId: number) {
+  console.warn("[Database] client_properties table not implemented yet");
+  return [];
+}
+
+// ============================================
+// STUBS ADICIONAIS PARA ELIMINAR WARNINGS DE BUILD
+// ============================================
+
+export async function getUserByOpenId(openId: string): Promise<any> {
+  // OAuth open_id não está no schema atual — stub para não quebrar build
+  console.warn("[Database] getUserByOpenId: open_id column not in current schema");
+  return null;
+}
+
+/** Stub de tabela leadInsights — não existe no schema atual */
+export const leadInsights = null;

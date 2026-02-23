@@ -25,27 +25,42 @@ export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
   description: text("description"),
+
+  // Enums alinhados ao Supabase:
+  // property_type: ["casa","apartamento","cobertura","terreno","comercial","rural","lancamento"]
+  // transaction_type: ["venda","locacao","ambos"]
   property_type: varchar("property_type").notNull(),
   transaction_type: varchar("transaction_type").notNull(),
 
-  // CAMPOS REAIS DO SUPABASE
-  sale_price: integer("sale_price"),
-  rent_price: integer("rent_price"),
-  condo_fee: integer("condo_fee"),
-  iptu: integer("iptu"),
+  // Campos de referência e SEO
+  reference_code: varchar("reference_code"),
+  slug: varchar("slug"),
+  meta_title: varchar("meta_title"),
+  meta_description: text("meta_description"),
+  main_image: text("main_image"),
+
+  // PREÇOS: numeric para aceitar decimais (alinhado ao Supabase)
+  sale_price: numeric("sale_price"),
+  rent_price: numeric("rent_price"),
+  condo_fee: numeric("condo_fee"),
+  iptu: numeric("iptu"),
 
   address: varchar("address"),
   neighborhood: varchar("neighborhood"),
   city: varchar("city").default("Brasília"),
   state: varchar("state").default("DF"),
+  zip_code: varchar("zip_code"),
+  latitude: varchar("latitude"),
+  longitude: varchar("longitude"),
 
   bedrooms: integer("bedrooms"),
   bathrooms: integer("bathrooms"),
   suites: integer("suites"),
   parking_spaces: integer("parking_spaces"),
 
-  // Mapeado de total_area
-  area: integer("total_area"),
+  // Áreas: numeric para aceitar decimais
+  total_area: numeric("total_area"),
+  built_area: numeric("built_area"),
 
   features: jsonb("features").default([]),
   images: jsonb("images").default([]),
@@ -54,8 +69,10 @@ export const properties = pgTable("properties", {
   // STATUS
   status: varchar("status").default("disponivel"),
   featured: boolean("featured").default(false),
+  published: boolean("published").default(false),
 
   owner_id: integer("owner_id"),
+  created_by: integer("created_by"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
@@ -76,10 +93,15 @@ export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
   email: varchar("email"),
+  // telefone é NOT NULL e UNIQUE no Supabase
   telefone: varchar("telefone").notNull().unique(),
   status: varchar("status").default("novo"),
   interesse: text("interesse"),
-  orcamento_max: integer("orcamento_max"),
+  orcamento_min: numeric("orcamento_min"),
+  orcamento_max: numeric("orcamento_max"),
+  regioes_interesse: jsonb("regioes_interesse").default([]),
+  observacoes: text("observacoes"),
+  origem: varchar("origem"),
   score: integer("score").default(0),
   assigned_to: integer("assigned_to").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
@@ -113,8 +135,8 @@ export const propertiesRelations = relations(properties, ({ one }) => ({
 export const financingSimulations = pgTable("financing_simulations", {
   id: serial("id").primaryKey(),
   lead_id: integer("lead_id").references(() => leads.id),
-  property_value: integer("property_value"),
-  down_payment: integer("down_payment"),
+  property_value: numeric("property_value"),
+  down_payment: numeric("down_payment"),
   term_months: integer("term_months"),
   interest_rate: varchar("interest_rate"),
   simulation_result: jsonb("simulation_result"),
@@ -145,7 +167,7 @@ export const rentalPayments = pgTable("rental_payments", {
   id: serial("id").primaryKey(),
   contract_id: integer("contract_id"),
   reference_month: varchar("reference_month"),
-  amount_total: integer("amount_total"),
+  amount_total: numeric("amount_total"),
   status: varchar("status").default("pending"),
   due_date: timestamp("due_date"),
   paid_at: timestamp("paid_at"),

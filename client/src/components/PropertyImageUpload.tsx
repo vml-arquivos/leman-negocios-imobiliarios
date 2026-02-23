@@ -54,9 +54,20 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
       for (let i = 0; i < totalFiles; i++) {
         const file = files[i];
         
-        // Validar tipo de arquivo
-        if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} não é uma imagem válida`);
+        // Validar tipo de arquivo: aceitar PNG, JPEG, WebP e TIFF
+        const allowedMimes = [
+          'image/png',
+          'image/jpeg',
+          'image/webp',
+          'image/tiff',
+          'application/tiff', // alguns browsers enviam assim
+        ];
+        const allowedExts = ['.png', '.jpg', '.jpeg', '.webp', '.tif', '.tiff'];
+        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+        const mimeOk = allowedMimes.includes(file.type);
+        const extOk = allowedExts.includes(ext);
+        if (!mimeOk && !extOk) {
+          toast.error(`${file.name} não é uma imagem válida (aceito: PNG, JPG, WebP, TIFF)`);
           continue;
         }
 
@@ -128,7 +139,7 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp,image/tiff,.tif,.tiff,.png,.jpg,.jpeg,.webp"
             multiple
             onChange={handleFileSelect}
             className="hidden"
@@ -152,7 +163,7 @@ export default function PropertyImageUpload({ propertyId, onUploadComplete }: Pr
             <p className="text-sm text-muted-foreground text-center">
               ou arraste e solte suas imagens aqui
               <br />
-              <span className="text-xs">PNG, JPG, WEBP até 5MB cada</span>
+              <span className="text-xs">PNG, JPG, WebP, TIFF até 5MB cada</span>
             </p>
             {uploading && (
               <div className="w-full max-w-xs mt-4">

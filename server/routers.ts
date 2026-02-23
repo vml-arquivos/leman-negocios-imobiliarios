@@ -302,10 +302,7 @@ const propertiesRouter = router({
       if (ctx.user.role !== 'admin') {
         throw new Error('Apenas administradores podem criar imóveis');
       }
-      return await db.createProperty({
-        ...input,
-        createdBy: ctx.user.id,
-      });
+      return await db.createProperty(input, ctx.user.id);
     }),
 
   // Atualizar imóvel (protegido - apenas admin)
@@ -1210,28 +1207,30 @@ const integrationRouter = router({
 
         if (input.transactionType) {
           filters.transactionType = input.transactionType;
-        } else if (lead.transactionInterest) {
-          filters.transactionType = lead.transactionInterest;
+        } else if (lead.interesse) {
+          filters.transactionType = lead.interesse;
         }
 
         if (input.propertyType) {
           filters.propertyType = input.propertyType;
         }
 
-        if (input.budgetMin || lead.budgetMin) {
-          filters.minPrice = input.budgetMin || lead.budgetMin;
+        if (input.budgetMin || lead.orcamento_min) {
+          filters.minPrice = input.budgetMin || lead.orcamento_min;
         }
 
-        if (input.budgetMax || lead.budgetMax) {
-          filters.maxPrice = input.budgetMax || lead.budgetMax;
+        if (input.budgetMax || lead.orcamento_max) {
+          filters.maxPrice = input.budgetMax || lead.orcamento_max;
         }
 
         if (input.neighborhood) {
           filters.neighborhood = input.neighborhood;
-        } else if (lead.preferredNeighborhoods) {
-          const neighborhoods = lead.preferredNeighborhoods.split(',');
+        } else if (lead.regioes_interesse) {
+          const neighborhoods = Array.isArray(lead.regioes_interesse)
+            ? lead.regioes_interesse
+            : String(lead.regioes_interesse).split(',');
           if (neighborhoods.length > 0) {
-            filters.neighborhood = neighborhoods[0].trim();
+            filters.neighborhood = String(neighborhoods[0]).trim();
           }
         }
 
@@ -1258,26 +1257,26 @@ const integrationRouter = router({
           lead: {
             id: lead.id,
             name: lead.name,
-            phone: lead.phone,
-            qualification: lead.qualification,
+            phone: lead.telefone,
+            qualification: lead.status,
           },
           properties: matchedProperties.map(p => ({
             id: p.id,
             title: p.title,
             description: p.description,
-            propertyType: p.propertyType,
-            transactionType: p.transactionType,
+            propertyType: p.property_type,
+            transactionType: p.transaction_type,
             price: p.sale_price,
             rental_price: p.rent_price,
             bedrooms: p.bedrooms,
             bathrooms: p.bathrooms,
-            totalArea: p.area,
+            totalArea: p.total_area,
             address: p.address,
             neighborhood: p.neighborhood,
             city: p.city,
             state: p.state,
             coverImage: Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null,
-            referenceCode: p.referenceCode,
+            referenceCode: p.reference_code,
             url: `https://lemannegocios.com.br/imovel/${p.id}`,
           })),
         };
