@@ -16,7 +16,6 @@ import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import AdminLayout from "@/components/AdminLayout";
 import PropertyImageUpload from "@/components/PropertyImageUpload";
 
 export default function PropertyEdit() {
@@ -113,30 +112,25 @@ export default function PropertyEdit() {
 
   if (loadingProperty) {
     return (
-      <AdminLayout>
-        <div className="flex items-center justify-center py-12">
+<div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </AdminLayout>
-    );
+);
   }
 
   if (!propertyId || !property) {
     return (
-      <AdminLayout>
-        <div className="text-center py-12">
+<div className="text-center py-12">
           <p className="text-muted-foreground">Imóvel não encontrado</p>
           <Button onClick={() => setLocation('/admin/properties')} className="mt-4">
             Voltar para Imóveis
           </Button>
         </div>
-      </AdminLayout>
-    );
+);
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+<div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -363,6 +357,5 @@ export default function PropertyEdit() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
-  );
+);
 }
