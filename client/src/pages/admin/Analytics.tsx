@@ -1,5 +1,4 @@
 import { trpc } from "@/lib/trpc";
-import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   TrendingUp, 
@@ -81,7 +80,6 @@ export default function Analytics() {
   ];
 
   return (
-    <AdminLayout>
       <div className="space-y-8">
         {/* Header */}
         <div>
@@ -297,6 +295,5 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
-  );
+      );
 }
