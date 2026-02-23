@@ -86,7 +86,11 @@ function Router() {
         )}
       </Route>
       <Route path="/admin/properties/:id">
-        {(params) => <PropertyEdit />}
+        {(params) => (
+          <AdminLayout>
+            <PropertyEdit />
+          </AdminLayout>
+        )}
       </Route>
       <Route path="/admin/funil">
         {() => (
@@ -103,7 +107,11 @@ function Router() {
         )}
       </Route>
       <Route path="/admin/leads/new">
-        {() => <LeadEdit />}
+        {() => (
+          <AdminLayout>
+            <LeadEdit />
+          </AdminLayout>
+        )}
       </Route>
       <Route path="/admin/clients-gestao">
         {() => (
