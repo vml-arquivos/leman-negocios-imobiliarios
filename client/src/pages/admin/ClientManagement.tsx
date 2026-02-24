@@ -124,11 +124,24 @@ const formatDate = (date: Date | string | null | undefined) => {
 
 export default function ClientManagement() {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   
   // Queries
   const { data: leads, refetch: refetchLeads, isLoading: leadsLoading } = trpc.leads.list.useQuery();
-  const { data: owners, refetch: refetchOwners, isLoading: ownersLoading } = trpc.owners.list.useQuery();
+  const ownersQuery = trpc.owners.list.useQuery();
+  const owners = ownersQuery.data ?? [];
+  const refetchOwners = ownersQuery.refetch;
+  const ownersLoading = ownersQuery.isLoading;
   const { data: properties } = trpc.properties.list.useQuery();
+  const selectedOwnerId = selectedClient?.type === 'owner' ? selectedClient.id : undefined;
+  const ownerPropertiesQuery = trpc.properties.listAdmin.useQuery(
+    { ownerId: selectedOwnerId },
+    { enabled: !!selectedOwnerId && isDetailsSheetOpen }
+  );
+  const availablePropertiesQuery = trpc.properties.listAdmin.useQuery(
+    { ownerId: null },
+    { enabled: !!selectedOwnerId && isDetailsSheetOpen }
+  );
   
   // Mutations
   const createLead = trpc.leads.create.useMutation();
@@ -137,6 +150,16 @@ export default function ClientManagement() {
   const createOwner = trpc.owners.create.useMutation();
   const updateOwner = trpc.owners.update.useMutation();
   const deleteOwner = trpc.owners.delete.useMutation();
+  const assignOwner = trpc.properties.assignOwner.useMutation({
+    onSuccess: async () => {
+      await utils.properties.listAdmin.invalidate();
+      setSelectedPropertyId('');
+      toast.success('Vínculo atualizado com sucesso');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao atualizar vínculo: ${error.message}`);
+    },
+  });
 
   // States
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -146,6 +169,7 @@ export default function ClientManagement() {
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'leads' | 'owners'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   
   const [formData, setFormData] = useState({
     type: 'lead' as ClientType,
@@ -188,8 +212,7 @@ export default function ClientManagement() {
       });
     }
     
-    if (owners) {
-      owners.forEach((owner: any) => {
+    owners.forEach((owner: any) => {
         clients.push({
           id: owner.id,
           type: 'owner',
@@ -209,8 +232,7 @@ export default function ClientManagement() {
           updatedAt: owner.updatedAt,
         });
       });
-    }
-    
+
     return clients.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
@@ -489,7 +511,7 @@ export default function ClientManagement() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold text-emerald-600">{owners?.length || 0}</div>
+                <div className="text-3xl font-bold text-emerald-600">{owners.length}</div>
                 <Briefcase className="h-8 w-8 text-emerald-500" />
               </div>
             </CardContent>
@@ -823,15 +845,59 @@ export default function ClientManagement() {
                   </CardHeader>
                   <CardContent>
                     {selectedClient.type === 'owner' ? (
-                      <div className="text-center py-8">
-                        <Home className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                          Nenhum imóvel vinculado a este proprietário
-                        </p>
-                        <Button variant="outline" className="mt-4">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Vincular Imóvel
-                        </Button>
+                      <div className="space-y-4">
+                        <div className="flex gap-2">
+                          <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um imóvel sem proprietário" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availablePropertiesQuery.data?.map((property: any) => (
+                                <SelectItem key={property.id} value={String(property.id)}>
+                                  {property.title} {property.neighborhood ? `- ${property.neighborhood}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={() => {
+                              if (!selectedPropertyId || !selectedOwnerId) return;
+                              assignOwner.mutate({ propertyId: Number(selectedPropertyId), ownerId: selectedOwnerId });
+                            }}
+                            disabled={!selectedPropertyId || assignOwner.isPending}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Vincular imóvel
+                          </Button>
+                        </div>
+
+                        {ownerPropertiesQuery.data && ownerPropertiesQuery.data.length > 0 ? (
+                          <div className="space-y-2">
+                            {ownerPropertiesQuery.data.map((property: any) => (
+                              <div key={property.id} className="flex items-center justify-between rounded border p-3">
+                                <div>
+                                  <p className="font-medium">{property.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {[property.neighborhood, property.city].filter(Boolean).join(', ') || 'Sem localização'}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => assignOwner.mutate({ propertyId: property.id, ownerId: null })}
+                                  disabled={assignOwner.isPending}
+                                >
+                                  Desvincular
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <Home className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">Nenhum imóvel vinculado a este proprietário</p>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8">
