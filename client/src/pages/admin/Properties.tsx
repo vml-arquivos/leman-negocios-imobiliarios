@@ -27,6 +27,11 @@ export default function PropertiesAdmin() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: properties, refetch } = trpc.properties.list.useQuery();
+
+  const { data: owners } = trpc.owners.list.useQuery();
+  const ownerNameById = new Map<number, string>();
+  owners?.forEach((o: any) => ownerNameById.set(o.id, o.name));
+
   const deleteMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
       toast.success("Imóvel excluído com sucesso!");
@@ -189,6 +194,7 @@ export default function PropertiesAdmin() {
                       <TableHead>Localização</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Status</TableHead>
+                  <TableHead>Proprietário</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
