@@ -38,11 +38,15 @@ export default function PropertyNew() {
     state: "DF",
     zipCode: "",
     referenceCode: "",
+    ownerId: "",
     status: "disponivel",
     featured: false,
   });
 
-  const createMutation = trpc.properties.create.useMutation({
+  
+  const { data: owners } = trpc.owners.list.useQuery();
+
+const createMutation = trpc.properties.create.useMutation({
     onSuccess: async (property) => {
       if (images.length > 0) {
         setUploading(true);
@@ -123,6 +127,7 @@ export default function PropertyNew() {
       state: formData.state || undefined,
       zipCode: formData.zipCode || undefined,
       referenceCode: formData.referenceCode || undefined,
+      ownerId: formData.ownerId && formData.ownerId !== "none" ? Number(formData.ownerId) : undefined,
       status: formData.status as any,
       featured: formData.featured,
     });
