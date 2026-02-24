@@ -25,7 +25,18 @@ async function startServer() {
   
   // Simple Auth API
   app.use("/api/auth", authRouter);
-  
+
+  // Client-side error ingest endpoint (ErrorBoundary)
+  app.post("/api/client-errors", (req, res) => {
+    const token = req.header("x-client-error-token") || (req.query.token as string | undefined);
+    if (process.env.CLIENT_ERROR_TOKEN && token !== process.env.CLIENT_ERROR_TOKEN) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
+    }
+    // Log estruturado para facilitar grep em produção
+    console.log("[ClientErrorIngest]", JSON.stringify(req.body));
+    return res.json({ ok: true });
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

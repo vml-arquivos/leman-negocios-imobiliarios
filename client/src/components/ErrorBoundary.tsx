@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Component, ReactNode } from "react";
+import { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -21,6 +21,36 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    const payload = {
+      pathname: window.location.pathname,
+      message: error?.message,
+      stack: error?.stack,
+      componentStack: info?.componentStack,
+      version:
+        (import.meta as any).env?.VITE_COMMIT_SHA ||
+        (import.meta as any).env?.VITE_GIT_COMMIT ||
+        "unknown",
+      ts: new Date().toISOString(),
+    };
+
+    // Log estruturado no console (visível no DevTools e no servidor de logs)
+    console.error("[ClientError]", payload);
+
+    // POST best-effort: não bloqueia nem propaga erros
+    fetch("/api/client-errors", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-client-error-token":
+          (import.meta as any).env?.VITE_CLIENT_ERROR_TOKEN || "",
+      },
+      body: JSON.stringify(payload),
+    }).catch(() => {
+      // silencioso: falha de rede não deve mascarar o erro original
+    });
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -31,7 +61,7 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
+            <h2 className="text-xl mb-4">Ocorreu um erro inesperado.</h2>
 
             <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
               <pre className="text-sm text-muted-foreground whitespace-break-spaces">
@@ -48,7 +78,7 @@ class ErrorBoundary extends Component<Props, State> {
               )}
             >
               <RotateCcw size={16} />
-              Reload Page
+              Recarregar Página
             </button>
           </div>
         </div>
