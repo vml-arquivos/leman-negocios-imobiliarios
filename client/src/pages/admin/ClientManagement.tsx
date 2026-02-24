@@ -94,7 +94,6 @@ interface UnifiedClient {
   whatsapp?: string | null;
   interest_type?: string | null;
   stage?: string | null;
-  stage?: string | null;
   source?: string | null;
   notes?: string | null;
   createdAt: Date | string;
@@ -125,7 +124,17 @@ const formatDate = (date: Date | string | null | undefined) => {
 export default function ClientManagement() {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
-  
+
+  // States — declarados ANTES de qualquer uso (evita TDZ no bundle minificado)
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<UnifiedClient | null>(null);
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'leads' | 'owners'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+
   // Queries
   const { data: leads, refetch: refetchLeads, isLoading: leadsLoading } = trpc.leads.list.useQuery();
   const ownersQuery = trpc.owners.list.useQuery();
@@ -142,7 +151,7 @@ export default function ClientManagement() {
     { ownerId: null },
     { enabled: !!selectedOwnerId && isDetailsSheetOpen }
   );
-  
+
   // Mutations
   const createLead = trpc.leads.create.useMutation();
   const updateLead = trpc.leads.update.useMutation();
@@ -160,16 +169,6 @@ export default function ClientManagement() {
       toast.error(`Erro ao atualizar vínculo: ${error.message}`);
     },
   });
-
-  // States
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<UnifiedClient | null>(null);
-  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'leads' | 'owners'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   
   const [formData, setFormData] = useState({
     type: 'lead' as ClientType,
