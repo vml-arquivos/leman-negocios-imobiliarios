@@ -179,6 +179,12 @@ export default function ClientManagement() {
     interest_type: "comprador",
     stage: "novo",
     notes: "",
+    // Lead perfil/intenção
+    interesse: "",
+    tipo_imovel: "",
+    orcamento_min: "",
+    orcamento_max: "",
+    regioes_interesse: "",
     // Owner fields
     cpfCnpj: "",
     address: "",
@@ -282,8 +288,13 @@ export default function ClientManagement() {
         phone: client.phone || "",
         whatsapp: client.whatsapp || "",
         interest_type: client.interest_type || "comprador",
-    stage: client.stage || "novo",
+        stage: client.stage || "novo",
         notes: client.notes || "",
+        interesse: (client as any).interesse || "",
+        tipo_imovel: (client as any).tipo_imovel || "",
+        orcamento_min: (client as any).orcamento_min ? String((client as any).orcamento_min) : "",
+        orcamento_max: (client as any).orcamento_max ? String((client as any).orcamento_max) : "",
+        regioes_interesse: (client as any).regioes_interesse || "",
         cpfCnpj: client.cpfCnpj || "",
         address: client.address || "",
         city: client.city || "",
@@ -300,8 +311,13 @@ export default function ClientManagement() {
         phone: "",
         whatsapp: "",
         interest_type: "comprador",
-    stage: "novo",
+        stage: "novo",
         notes: "",
+        interesse: "",
+        tipo_imovel: "",
+        orcamento_min: "",
+        orcamento_max: "",
+        regioes_interesse: "",
         cpfCnpj: "",
         address: "",
         city: "",
@@ -330,6 +346,10 @@ export default function ClientManagement() {
               phone: formData.phone || undefined,
               whatsapp: formData.whatsapp || undefined,
               notes: formData.notes || undefined,
+              preferredNeighborhoods: formData.regioes_interesse || undefined,
+              preferredPropertyTypes: formData.tipo_imovel || undefined,
+              budgetMin: formData.orcamento_min ? Number(formData.orcamento_min) : undefined,
+              budgetMax: formData.orcamento_max ? Number(formData.orcamento_max) : undefined,
             },
           });
           toast.success("Lead atualizado com sucesso!");
@@ -1063,6 +1083,70 @@ export default function ClientManagement() {
               />
             </div>
             
+            {/* Campos específicos de Lead: perfil/intenção */}
+            {formData.type === 'lead' && (
+              <>
+                <Separator />
+                <p className="text-sm font-medium text-slate-700">Perfil / Intenção de Compra</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="interesse">Interesse</Label>
+                    <select
+                      id="interesse"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                      value={formData.interesse}
+                      onChange={(e) => setFormData({ ...formData, interesse: e.target.value })}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="venda">Compra</option>
+                      <option value="locacao">Locação</option>
+                      <option value="ambos">Ambos</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="tipo_imovel">Tipo de Imóvel</Label>
+                    <Input
+                      id="tipo_imovel"
+                      value={formData.tipo_imovel}
+                      onChange={(e) => setFormData({ ...formData, tipo_imovel: e.target.value })}
+                      placeholder="Ex: apartamento, casa"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="orcamento_min">Orçamento Mín. (R$)</Label>
+                    <Input
+                      id="orcamento_min"
+                      type="number"
+                      value={formData.orcamento_min}
+                      onChange={(e) => setFormData({ ...formData, orcamento_min: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="orcamento_max">Orçamento Máx. (R$)</Label>
+                    <Input
+                      id="orcamento_max"
+                      type="number"
+                      value={formData.orcamento_max}
+                      onChange={(e) => setFormData({ ...formData, orcamento_max: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="regioes_interesse">Regiões de Interesse</Label>
+                  <Input
+                    id="regioes_interesse"
+                    value={formData.regioes_interesse}
+                    onChange={(e) => setFormData({ ...formData, regioes_interesse: e.target.value })}
+                    placeholder="Ex: Asa Sul, Lago Norte"
+                  />
+                </div>
+              </>
+            )}
+
             {/* Campos específicos de Proprietário */}
             {formData.type === 'owner' && (
               <>
