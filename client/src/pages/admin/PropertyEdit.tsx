@@ -22,6 +22,7 @@ export default function PropertyEdit() {
   const [, setLocation] = useLocation();
   const params = useParams();
   const propertyId = params.id ? parseInt(params.id) : null;
+  const utils = trpc.useUtils();
 
   const [formData, setFormData] = useState<{
     title: string;
@@ -68,6 +69,8 @@ export default function PropertyEdit() {
   const updateMutation = trpc.properties.update.useMutation({
     onSuccess: () => {
       toast.success("Imóvel atualizado com sucesso!");
+      utils.properties.listAdmin.invalidate();
+      utils.properties.list.invalidate();
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar imóvel: ${error.message}`);

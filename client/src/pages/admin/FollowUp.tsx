@@ -63,15 +63,14 @@ export default function FollowUp() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="container mx-auto py-8 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="container mx-auto py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
             <AlertTriangle className="h-10 w-10 text-orange-500" />
@@ -277,7 +276,6 @@ export default function FollowUp() {
             )}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

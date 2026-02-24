@@ -204,7 +204,7 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-white/70 font-medium flex items-center gap-2">
               <Snowflake className="h-4 w-4 text-blue-300" />
-              Quentes inativos
+              Quentes sem contato
             </CardTitle>
           </CardHeader>
           <CardContent>

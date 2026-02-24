@@ -348,6 +348,7 @@ const propertiesRouter = router({
         metaTitle: z.string().optional(),
         metaDescription: z.string().optional(),
         slug: z.string().optional(),
+        ownerId: z.number().nullable().optional(),
       }),
     }))
     .mutation(async ({ input, ctx }) => {
