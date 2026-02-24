@@ -237,6 +237,31 @@ export default function PropertyEdit() {
                       </Select>
                     </div>
 
+
+                    <div className="space-y-2">
+                      <Label>Proprietário (interno)</Label>
+                      <Select
+                        value={formData.ownerId}
+                        onValueChange={(value) => handleChange('ownerId', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um proprietário..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem proprietário</SelectItem>
+                          {owners?.map((o: any) => (
+                            <SelectItem key={o.id} value={String(o.id)}>
+                              {o.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Campo interno (não aparece no site). Usado para relatórios e repasses.
+                      </p>
+                    </div>
+
+
                     <div className="space-y-2">
                       <Label htmlFor="status">Status</Label>
                       <Select
