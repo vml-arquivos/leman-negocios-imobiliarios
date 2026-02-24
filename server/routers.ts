@@ -8,7 +8,7 @@ import * as db from "./db";
 // [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
 import { eq, desc, asc, gte, sql, isNull } from "drizzle-orm";
-import {financingSimulations, leads, rentalPayments, properties, landlords, owners, propertyImages, campaignSources, interactions, transactions, commissions, contracts, financialCategories} from "../drizzle/schema";
+import {financingSimulations, leads, rentalPayments, properties, landlords, owners, propertyImages, campaignSources, interactions, transactions, commissions, contracts, financialCategories, analyticsEvents, reviews} from "../drizzle/schema";
 // tenants não existe no schema real — usar stub
 const tenants = leads; // backward compat stub
 
@@ -131,7 +131,7 @@ const authRouter = router({
       const token = createToken({
         userId: user.id,
         email: user.email,
-        name: user.name || "",
+       name: user.name || "",
         role: user.role,
       });
       
@@ -364,6 +364,7 @@ const propertiesRouter = router({
       if (ctx.user.role !== 'admin') {
         throw new Error('Apenas administradores podem listar imóveis no admin');
       }
+
       const dbi = await getDb();
       if (!dbi) return [];
 
@@ -388,7 +389,7 @@ const propertiesRouter = router({
         return base.where(isNull(properties.owner_id)).orderBy(desc(properties.updated_at));
       }
 
-      if (typeof input?.ownerId === 'number') {
+      if (typeof input?.ownerId === "number") {
         return base.where(eq(properties.owner_id, input.ownerId)).orderBy(desc(properties.updated_at));
       }
 
@@ -2455,8 +2456,8 @@ const rentalRouter = router({
   expenses: router({
     create: protectedProcedure
       .input(z.object({
-        propertyId: z.number(),
-        landlordId: z.number(),
+        propertyId: z.number().optional(),
+        landlordId: z.number().optional(),
         expenseType: z.enum(["manutencao", "reparo", "pintura", "limpeza", "jardinagem", "seguranca", "seguro", "iptu", "condominio", "taxa_administracao", "outros"]),
         description: z.string(),
         amount: z.number(),
