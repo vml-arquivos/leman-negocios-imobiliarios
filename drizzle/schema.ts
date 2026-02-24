@@ -546,3 +546,14 @@ export const rentalPayments = pgTable("rental_payments", {
   paid_at:         timestamp("paid_at"),
   created_at:      timestamp("created_at").defaultNow(),
 });
+
+
+/** @deprecated Compat export used by legacy router code */
+export const financialCategories = pgTable("financial_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(),
+  color: varchar("color"),
+  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

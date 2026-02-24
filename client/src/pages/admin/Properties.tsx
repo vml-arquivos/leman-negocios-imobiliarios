@@ -26,11 +26,8 @@ export default function PropertiesAdmin() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: properties, refetch } = trpc.properties.list.useQuery();
+  const { data: properties, refetch } = trpc.properties.listAdmin.useQuery();
 
-  const { data: owners } = trpc.owners.list.useQuery();
-  const ownerNameById = new Map<number, string>();
-  owners?.forEach((o: any) => ownerNameById.set(o.id, o.name));
 
   const deleteMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
@@ -225,6 +222,7 @@ export default function PropertiesAdmin() {
                             {getStatusLabel(property.status)}
                           </Badge>
                         </TableCell>
+                        <TableCell>{property.ownerName || "—"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
                             <Button

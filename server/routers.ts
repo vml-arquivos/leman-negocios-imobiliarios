@@ -7,7 +7,7 @@ import { z } from "zod";
 import * as db from "./db";
 // [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
-import { eq, desc, asc, gte, sql } from "drizzle-orm";
+import { eq, desc, asc, gte, sql, isNull } from "drizzle-orm";
 import {financingSimulations, leads, rentalPayments, properties, landlords, owners, propertyImages, campaignSources, interactions, transactions, commissions, contracts, financialCategories} from "../drizzle/schema";
 // tenants não existe no schema real — usar stub
 const tenants = leads; // backward compat stub
@@ -295,7 +295,7 @@ const propertiesRouter = router({
       features: z.string().optional(),
       images: z.string().optional(),
       mainImage: z.string().optional(),
-      status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]).optional(),
+      status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo"]).optional(),
       featured: z.boolean().optional(),
       published: z.boolean().optional(),
       metaTitle: z.string().optional(),
@@ -342,7 +342,7 @@ const propertiesRouter = router({
         features: z.string().optional(),
         images: z.string().optional(),
         mainImage: z.string().optional(),
-        status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo", "geladeira"]).optional(),
+        status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo"]).optional(),
         featured: z.boolean().optional(),
         published: z.boolean().optional(),
         metaTitle: z.string().optional(),
@@ -355,6 +355,56 @@ const propertiesRouter = router({
         throw new Error('Apenas administradores podem atualizar imóveis');
       }
       await db.updateProperty(input.id, input.data);
+      return { success: true };
+    }),
+
+  listAdmin: protectedProcedure
+    .input(z.object({ ownerId: z.number().nullable().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem listar imóveis no admin');
+      }
+      const dbi = await getDb();
+      if (!dbi) return [];
+
+      const base = dbi
+        .select({
+          id: properties.id,
+          referenceCode: properties.reference_code,
+          title: properties.title,
+          propertyType: properties.property_type,
+          neighborhood: properties.neighborhood,
+          city: properties.city,
+          salePrice: properties.sale_price,
+          rentPrice: properties.rent_price,
+          status: properties.status,
+          owner_id: properties.owner_id,
+          ownerName: owners.name,
+        })
+        .from(properties)
+        .leftJoin(owners, eq(properties.owner_id, owners.id));
+
+      if (input?.ownerId === null) {
+        return base.where(isNull(properties.owner_id)).orderBy(desc(properties.updated_at));
+      }
+
+      if (typeof input?.ownerId === 'number') {
+        return base.where(eq(properties.owner_id, input.ownerId)).orderBy(desc(properties.updated_at));
+      }
+
+      return base.orderBy(desc(properties.updated_at));
+    }),
+
+  assignOwner: protectedProcedure
+    .input(z.object({
+      propertyId: z.number(),
+      ownerId: z.number().nullable(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem vincular proprietário');
+      }
+      await db.updateProperty(input.propertyId, { ownerId: input.ownerId });
       return { success: true };
     }),
 
@@ -1377,7 +1427,12 @@ const integrationRouter = router({
 const ownersRouter = router({
   // Listar todos os proprietários (protegido)
   list: protectedProcedure.query(async () => {
-    return await db.getAllOwners();
+    const dbi = await getDb();
+    if (!dbi) return [];
+    return dbi
+      .select({ id: owners.id, name: owners.name, phone: owners.phone, email: owners.email })
+      .from(owners)
+      .orderBy(asc(owners.name));
   }),
 
   // Obter proprietário por ID (protegido)

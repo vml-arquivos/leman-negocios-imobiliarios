@@ -62,6 +62,9 @@ export default function PropertyEdit() {
     { enabled: !!propertyId }
   );
 
+  const ownersQuery = trpc.owners.list.useQuery();
+  const owners = ownersQuery.data ?? [];
+
   const updateMutation = trpc.properties.update.useMutation({
     onSuccess: () => {
       toast.success("Imóvel atualizado com sucesso!");
@@ -249,7 +252,7 @@ export default function PropertyEdit() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Sem proprietário</SelectItem>
-                          {owners?.map((o: any) => (
+                          {owners.map((o: any) => (
                             <SelectItem key={o.id} value={String(o.id)}>
                               {o.name}
                             </SelectItem>
