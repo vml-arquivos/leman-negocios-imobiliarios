@@ -180,11 +180,14 @@ export default function ClientManagement() {
     stage: "novo",
     notes: "",
     // Lead perfil/intenção
+    finalidade: "",
     interesse: "",
     tipo_imovel: "",
     orcamento_min: "",
     orcamento_max: "",
     regioes_interesse: "",
+    // Owner perfil
+    perfil_owner: "",
     // Owner fields
     cpfCnpj: "",
     address: "",
@@ -290,11 +293,14 @@ export default function ClientManagement() {
         interest_type: client.interest_type || "comprador",
         stage: client.stage || "novo",
         notes: client.notes || "",
+        finalidade: (client as any).finalidade || "",
         interesse: (client as any).interesse || "",
         tipo_imovel: (client as any).tipo_imovel || "",
         orcamento_min: (client as any).orcamento_min ? String((client as any).orcamento_min) : "",
         orcamento_max: (client as any).orcamento_max ? String((client as any).orcamento_max) : "",
         regioes_interesse: (client as any).regioes_interesse || "",
+        // Owner: extrair PERFIL_OWNER de notes
+        perfil_owner: (() => { const m = (client.notes || "").match(/PERFIL_OWNER=(\w+)/); return m ? m[1] : ""; })(),
         cpfCnpj: client.cpfCnpj || "",
         address: client.address || "",
         city: client.city || "",
@@ -313,11 +319,13 @@ export default function ClientManagement() {
         interest_type: "comprador",
         stage: "novo",
         notes: "",
+        finalidade: "",
         interesse: "",
         tipo_imovel: "",
         orcamento_min: "",
         orcamento_max: "",
         regioes_interesse: "",
+        perfil_owner: "",
         cpfCnpj: "",
         address: "",
         city: "",
@@ -346,6 +354,7 @@ export default function ClientManagement() {
               phone: formData.phone || undefined,
               whatsapp: formData.whatsapp || undefined,
               notes: formData.notes || undefined,
+              source: formData.finalidade || undefined,
               preferredNeighborhoods: formData.regioes_interesse || undefined,
               preferredPropertyTypes: formData.tipo_imovel || undefined,
               budgetMin: formData.orcamento_min ? Number(formData.orcamento_min) : undefined,
@@ -366,6 +375,14 @@ export default function ClientManagement() {
         refetchLeads();
       } else {
         if (selectedClient && selectedClient.type === 'owner') {
+          // Mesclar PERFIL_OWNER em notes sem criar nova coluna
+          const ownerNotes = (() => {
+            const base = formData.notes || "";
+            const tag = formData.perfil_owner ? `PERFIL_OWNER=${formData.perfil_owner}` : "";
+            if (!tag) return base;
+            const cleaned = base.replace(/PERFIL_OWNER=\w+/g, "").trim();
+            return cleaned ? `${cleaned}\n${tag}` : tag;
+          })();
           await updateOwner.mutateAsync({
             id: selectedClient.id,
             data: {
@@ -379,7 +396,7 @@ export default function ClientManagement() {
               state: formData.state || undefined,
               bankName: formData.bankName || undefined,
               pixKey: formData.pixKey || undefined,
-              notes: formData.notes || undefined,
+              notes: ownerNotes || undefined,
             },
           });
           toast.success("Proprietário atualizado com sucesso!");
@@ -1087,21 +1104,38 @@ export default function ClientManagement() {
             {formData.type === 'lead' && (
               <>
                 <Separator />
-                <p className="text-sm font-medium text-slate-700">Perfil / Intenção de Compra</p>
+                <p className="text-sm font-medium">Perfil / Intenção de Compra</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="interesse">Interesse</Label>
-                    <select
-                      id="interesse"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                      value={formData.interesse}
-                      onChange={(e) => setFormData({ ...formData, interesse: e.target.value })}
+                    <Label htmlFor="finalidade">Finalidade *</Label>
+                    <Select
+                      value={formData.finalidade}
+                      onValueChange={(v) => setFormData({ ...formData, finalidade: v })}
                     >
-                      <option value="">Selecione...</option>
-                      <option value="venda">Compra</option>
-                      <option value="locacao">Locação</option>
-                      <option value="ambos">Ambos</option>
-                    </select>
+                      <SelectTrigger id="finalidade">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="comprar">Comprar</SelectItem>
+                        <SelectItem value="alugar">Alugar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="interesse">Interesse *</Label>
+                    <Select
+                      value={formData.interesse}
+                      onValueChange={(v) => setFormData({ ...formData, interesse: v })}
+                    >
+                      <SelectTrigger id="interesse">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="venda">Venda</SelectItem>
+                        <SelectItem value="locacao">Locação</SelectItem>
+                        <SelectItem value="ambos">Ambos</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="tipo_imovel">Tipo de Imóvel</Label>
@@ -1150,6 +1184,25 @@ export default function ClientManagement() {
             {/* Campos específicos de Proprietário */}
             {formData.type === 'owner' && (
               <>
+                <Separator />
+                <p className="text-sm font-medium">Perfil do Proprietário</p>
+                <div className="grid gap-2">
+                  <Label htmlFor="perfil_owner">Tipo de Proprietário *</Label>
+                  <Select
+                    value={formData.perfil_owner}
+                    onValueChange={(v) => setFormData({ ...formData, perfil_owner: v })}
+                  >
+                    <SelectTrigger id="perfil_owner">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vendedor">Vendedor</SelectItem>
+                      <SelectItem value="locador">Locador</SelectItem>
+                      <SelectItem value="ambos">Vendedor e Locador</SelectItem>
+                      <SelectItem value="investidor">Investidor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Separator />
                 <div className="grid gap-2">
                   <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
@@ -1234,7 +1287,14 @@ export default function ClientManagement() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveClient} disabled={!formData.name}>
+            <Button
+              onClick={handleSaveClient}
+              disabled={
+                !formData.name ||
+                (formData.type === 'lead' && (!formData.finalidade || !formData.interesse)) ||
+                (formData.type === 'owner' && !formData.perfil_owner)
+              }
+            >
               {selectedClient ? "Salvar Alterações" : "Criar Cliente"}
             </Button>
           </DialogFooter>

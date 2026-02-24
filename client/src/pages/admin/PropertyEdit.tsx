@@ -40,6 +40,7 @@ export default function PropertyEdit() {
     totalArea: number;
     status: "disponivel" | "reservado" | "vendido" | "alugado" | "inativo" | "geladeira";
     featured: boolean;
+    ownerId: number | null;
   }>({
     title: "",
     description: "",
@@ -56,6 +57,7 @@ export default function PropertyEdit() {
     totalArea: 0,
     status: "disponivel",
     featured: false,
+    ownerId: null,
   });
 
   const { data: property, isLoading: loadingProperty } = trpc.properties.getById.useQuery(
@@ -95,6 +97,7 @@ export default function PropertyEdit() {
         totalArea: property.totalArea || 0,
         status: property.status || "disponivel",
         featured: property.featured ? true : false,
+        ownerId: property.owner_id ? Number(property.owner_id) : (property.ownerId ? Number(property.ownerId) : null),
       });
     }
   }, [property]);
@@ -247,8 +250,11 @@ export default function PropertyEdit() {
                     <div className="space-y-2">
                       <Label>Proprietário (interno)</Label>
                       <Select
-                        value={formData.ownerId}
-                        onValueChange={(value) => handleChange('ownerId', value)}
+                        value={formData.ownerId != null ? String(formData.ownerId) : "none"}
+                        onValueChange={(value) => {
+                          if (!value || value === "none") handleChange('ownerId', null);
+                          else handleChange('ownerId', Number(value));
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um proprietário..." />
