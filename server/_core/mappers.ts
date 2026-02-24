@@ -76,6 +76,10 @@ export function mapPropertyInputToDb(input: Record<string, any>, userId?: number
   if (input.sale_price  !== undefined) mapped.sale_price  = toNumericOrNull(input.sale_price);
   if (input.rent_price  !== undefined) mapped.rent_price  = toNumericOrNull(input.rent_price);
 
+  // Compat: alguns formulários antigos enviam salePrice/rentPrice (camelCase)
+  if (input.sale_price === undefined && input.salePrice !== undefined) mapped.sale_price = toNumericOrNull(input.salePrice);
+  if (input.rent_price === undefined && input.rentPrice !== undefined) mapped.rent_price = toNumericOrNull(input.rentPrice);
+
   // ── Numéricos diretos ────────────────────────────────────────────────────
   if (input.bedrooms    !== undefined) mapped.bedrooms    = toIntOrNull(input.bedrooms);
   if (input.bathrooms   !== undefined) mapped.bathrooms   = toIntOrNull(input.bathrooms);
