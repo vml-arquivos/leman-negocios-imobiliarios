@@ -403,6 +403,24 @@ const createMutation = trpc.properties.create.useMutation({
                   </div>
                 </div>
 
+                <div>
+                  <Label htmlFor="ownerId">Proprietário (interno)</Label>
+                  <Select
+                    value={formData.ownerId && formData.ownerId !== "none" ? String(formData.ownerId) : "none"}
+                    onValueChange={(value) => setFormData({ ...formData, ownerId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger id="ownerId">
+                      <SelectValue placeholder="Sem proprietário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem proprietário</SelectItem>
+                      {(owners ?? []).map((o: any) => (
+                        <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
