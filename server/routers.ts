@@ -6,6 +6,7 @@ import { webhooksRouter } from "./routers/webhooks";
 import { z } from "zod";
 import * as db from "./db";
 import { computeLeadScore } from "./crm/score";
+import { computeNextAction } from "./crm/nextAction";
 // [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
 import { eq, desc, asc, gte, sql, isNull } from "drizzle-orm";
@@ -650,6 +651,16 @@ const leadsRouter = router({
         metadata: { ...(lead.metadata || {}), priority, scoreReasons: reasons },
       });
       return { score, priority, reasons };
+    }),
+
+  nextAction: protectedProcedure
+    .input(z.object({ leadId: z.number() }))
+    .query(async ({ input }) => {
+      const lead = await db.getLeadById(input.leadId);
+      if (!lead) throw new Error("Lead não encontrado");
+      const interactions = await db.getInteractionsByLeadId(input.leadId);
+      const lastInteraction = interactions[0]?.created_at ?? null;
+      return computeNextAction(lead, lastInteraction);
     }),
 });
 // ============================================

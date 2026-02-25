@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import NextActionCard from "@/components/NextActionCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -820,6 +821,10 @@ export default function ClientManagement() {
                   </Card>
                 )}
                 
+                {selectedClient.type === 'lead' && (
+                  <NextActionCard leadId={selectedClient.id} />
+                )}
+
                 {selectedClient.type === 'owner' && selectedClient.bankName && (
                   <Card>
                     <CardHeader className="pb-3">
