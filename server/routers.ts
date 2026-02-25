@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { webhooksRouter } from "./routers/webhooks";
 import { z } from "zod";
 import * as db from "./db";
+import { computeLeadScore } from "./crm/score";
 // [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
 import { eq, desc, asc, gte, sql, isNull } from "drizzle-orm";
@@ -634,14 +635,25 @@ const leadsRouter = router({
         }
       }
 
-      // Ordenar por dias sem contato (maior primeiro)
+       // Ordenar por dias sem contato (maior primeiro)
       return inactiveLeads.sort((a, b) => b.daysSinceLastContact - a.daysSinceLastContact);
     }),
+
+  recomputeScore: protectedProcedure
+    .input(z.object({ leadId: z.number() }))
+    .mutation(async ({ input }) => {
+      const lead = await db.getLeadById(input.leadId);
+      if (!lead) throw new Error("Lead não encontrado");
+      const { score, priority, reasons } = computeLeadScore(lead);
+      await db.updateLead(input.leadId, {
+        score,
+        metadata: { ...(lead.metadata || {}), priority, scoreReasons: reasons },
+      });
+      return { score, priority, reasons };
+    }),
 });
-
-
 // ============================================
-// INTERACTIONS ROUTER
+// INTERACTIONS ROUTERR
 // ============================================
 
 const interactionsRouter = router({

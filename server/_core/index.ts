@@ -7,6 +7,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import authRouter from "../auth-simple";
 import * as db from "../db";
+import { computeLeadScore } from "../crm/score";
 
 async function startServer() {
   const app = express();
@@ -97,10 +98,21 @@ async function startServer() {
         stage: "novo",
       });
 
+      // 4) Lead Scoring
+      if (lead?.id) {
+        const { score, priority, reasons } = computeLeadScore(lead, content);
+        await db.updateLead(lead.id, {
+          score,
+          metadata: { ...(lead.metadata || {}), priority, scoreReasons: reasons },
+        });
+        lead.score = score;
+        lead.metadata = { ...(lead.metadata || {}), priority };
+      }
+
       console.log(
-        `[N8N Webhook] phone=${phone} lead=${lead?.id} buffer=${bufferEntry?.id}`
+        `[N8N Webhook] phone=${phone} lead=${lead?.id} score=${lead?.score} buffer=${bufferEntry?.id}`
       );
-      return res.json({ ok: true, leadId: lead?.id, bufferId: bufferEntry?.id });
+      return res.json({ ok: true, leadId: lead?.id, bufferId: bufferEntry?.id, score: lead?.score });
     } catch (err: any) {
       console.error("[N8N Webhook] Error:", err);
       return res
