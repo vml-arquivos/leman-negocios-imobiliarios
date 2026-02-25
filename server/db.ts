@@ -1070,3 +1070,63 @@ export async function listRentalPayments(params: {
 
   return { items, total: Number(totalResult[0]?.count || 0) };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHATSAPP INBOX QUERIES (raw SQL — tabela message_buffer sem Drizzle schema)
+// ─────────────────────────────────────────────────────────────────────────────
+export async function listWhatsAppConversations(limit = 50): Promise<any[]> {
+  const database = await getDb();
+  if (!database) return [];
+  try {
+    const rows = await database.execute(
+      sql`SELECT
+            mb.phone,
+            MAX(mb.created_at) AS last_at,
+            (SELECT message FROM message_buffer WHERE phone = mb.phone ORDER BY created_at DESC LIMIT 1) AS last_message,
+            COUNT(*) FILTER (WHERE mb.processed = false OR mb.processed IS NULL) AS pending_count,
+            l.id AS lead_id,
+            l.name AS lead_name,
+            l.score AS lead_score,
+            l.status AS lead_status
+          FROM message_buffer mb
+          LEFT JOIN leads l ON l.telefone = mb.phone
+          GROUP BY mb.phone, l.id, l.name, l.score, l.status
+          ORDER BY last_at DESC
+          LIMIT ${limit}`
+    );
+    return (rows as any).rows ?? (rows as any[]);
+  } catch (err) {
+    console.error("[WhatsAppInbox] listConversations error:", err);
+    return [];
+  }
+}
+
+export async function getWhatsAppThread(phone: string, limit = 100): Promise<any[]> {
+  const database = await getDb();
+  if (!database) return [];
+  try {
+    const rows = await database.execute(
+      sql`SELECT id, phone, message, processed, created_at
+          FROM message_buffer
+          WHERE phone = ${phone}
+          ORDER BY created_at ASC
+          LIMIT ${limit}`
+    );
+    return (rows as any).rows ?? (rows as any[]);
+  } catch (err) {
+    console.error("[WhatsAppInbox] getThread error:", err);
+    return [];
+  }
+}
+
+export async function markMessageProcessed(messageId: number): Promise<void> {
+  const database = await getDb();
+  if (!database) return;
+  try {
+    await database.execute(
+      sql`UPDATE message_buffer SET processed = true WHERE id = ${messageId}`
+    );
+  } catch (err) {
+    console.error("[WhatsAppInbox] markProcessed error:", err);
+  }
+}

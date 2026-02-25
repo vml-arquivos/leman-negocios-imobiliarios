@@ -2623,6 +2623,30 @@ const clientsRouter = router({
 // APP ROUTER
 // ============================================
 
+// ============================================
+// WHATSAPP INBOX ROUTER
+// ============================================
+const whatsappInboxRouter = router({
+  listConversations: protectedProcedure
+    .input(z.object({ limit: z.number().optional() }).optional())
+    .query(async ({ input }) => {
+      return await db.listWhatsAppConversations(input?.limit ?? 50);
+    }),
+
+  getThread: protectedProcedure
+    .input(z.object({ phone: z.string(), limit: z.number().optional() }))
+    .query(async ({ input }) => {
+      return await db.getWhatsAppThread(input.phone, input.limit ?? 100);
+    }),
+
+  markProcessed: protectedProcedure
+    .input(z.object({ messageId: z.number() }))
+    .mutation(async ({ input }) => {
+      await db.markMessageProcessed(input.messageId);
+      return { ok: true };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -2641,6 +2665,7 @@ export const appRouter = router({
   financing: financingRouter,
   clients: clientsRouter,
   webhooks: webhooksRouter,
+  whatsappInbox: whatsappInboxRouter,
 });
 
 export type AppRouter = typeof appRouter;

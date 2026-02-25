@@ -39,6 +39,7 @@ import Login from "./pages/auth/Login";
 import LoginSimple from "./pages/auth/LoginSimple";
 import Settings from "./pages/admin/Settings";
 import FinancingInbox from "./pages/admin/FinancingInbox";
+import WhatsAppInbox from "./pages/admin/WhatsAppInbox";
 
 function Router() {
   return (
@@ -181,6 +182,13 @@ function Router() {
         {() => (
           <AdminLayout>
             <FinancingInbox />
+          </AdminLayout>
+        )}
+      </Route>
+      <Route path="/admin/whatsapp-inbox">
+        {() => (
+          <AdminLayout>
+            <WhatsAppInbox />
           </AdminLayout>
         )}
       </Route>

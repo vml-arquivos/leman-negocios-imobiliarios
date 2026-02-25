@@ -25,6 +25,7 @@ import {
   DollarSign,
   Search,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -56,6 +57,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       },
       { name: "Financeiro", href: "/admin/financial", icon: DollarSign },
       { name: "Simulações", href: "/admin/financing-inbox", icon: DollarSign },
+      { name: "WhatsApp Inbox", href: "/admin/whatsapp-inbox", icon: MessageSquare },
       { name: "Blog", href: "/admin/blog", icon: FileText },
       { name: "Personalizar Site", href: "/admin/customization", icon: Paintbrush },
       { name: "Configurações", href: "/admin/settings", icon: Settings },
