@@ -38,6 +38,7 @@ import OwnerPortal from "./pages/OwnerPortal";
 import Login from "./pages/auth/Login";
 import LoginSimple from "./pages/auth/LoginSimple";
 import Settings from "./pages/admin/Settings";
+import FinancingInbox from "./pages/admin/FinancingInbox";
 
 function Router() {
   return (
@@ -173,6 +174,13 @@ function Router() {
         {() => (
           <AdminLayout>
             <FinancialDashboard />
+          </AdminLayout>
+        )}
+      </Route>
+      <Route path="/admin/financing-inbox">
+        {() => (
+          <AdminLayout>
+            <FinancingInbox />
           </AdminLayout>
         )}
       </Route>

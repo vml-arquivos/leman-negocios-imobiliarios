@@ -55,6 +55,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         badge: true,
       },
       { name: "Financeiro", href: "/admin/financial", icon: DollarSign },
+      { name: "Simulações", href: "/admin/financing-inbox", icon: DollarSign },
       { name: "Blog", href: "/admin/blog", icon: FileText },
       { name: "Personalizar Site", href: "/admin/customization", icon: Paintbrush },
       { name: "Configurações", href: "/admin/settings", icon: Settings },
