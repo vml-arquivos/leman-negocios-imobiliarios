@@ -1097,16 +1097,33 @@ const propertyImagesRouter = router({
         }
       }
 
-      // Deletar do DB
+       // Deletar do DB
       await database
         .delete(propertyImages)
         .where(eq(propertyImages.id, input.imageId));
-
+      return { success: true };
+    }),
+  // Reordenar imagens (drag-and-drop)
+  reorder: protectedProcedure
+    .input(z.object({
+      propertyId: z.number(),
+      orderedIds: z.array(z.number()),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') throw new Error('Acesso negado');
+      const database = await getDb();
+      if (!database) throw new Error('Database not available');
+      await Promise.all(
+        input.orderedIds.map((id, idx) =>
+          database
+            .update(propertyImages)
+            .set({ display_order: idx })
+            .where(eq(propertyImages.id, id))
+        )
+      );
       return { success: true };
     }),
 });
-
-
 // ============================================
 // INTEGRATION ROUTER (WhatsApp / N8N)
 // ============================================

@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreVertical, Pencil, Trash2, Eye, Search, Building2 } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, Eye, Search, Building2, Share2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -199,10 +199,19 @@ export default function PropertiesAdmin() {
                     {filteredProperties.map((property) => (
                       <TableRow key={property.id}>
                         <TableCell className="font-mono text-sm">
-                          {property.referenceCode || `#${property.id}`}
+                          {(property as any).reference_code || property.referenceCode || `#${property.id}`}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {property.title}
+                          <div className="flex items-center gap-3">
+                            {((property as any).main_image || (Array.isArray((property as any).images) && (property as any).images[0])) && (
+                              <img
+                                src={(property as any).main_image || (property as any).images[0]}
+                                alt={property.title}
+                                className="w-12 h-10 object-cover rounded flex-shrink-0"
+                              />
+                            )}
+                            <span className="line-clamp-1">{property.title}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="capitalize">
                           {property.propertyType}
@@ -211,11 +220,13 @@ export default function PropertiesAdmin() {
                           {property.neighborhood}, {property.city}
                         </TableCell>
                         <TableCell>
-                          {property.salePrice
-                            ? `R$ ${(property.salePrice / 100).toLocaleString('pt-BR')}`
-                            : property.rentPrice
-                            ? `R$ ${(property.rentPrice / 100).toLocaleString('pt-BR')}/mês`
-                            : 'N/A'}
+                          {(() => {
+                            const sp = (property as any).sale_price ?? property.salePrice;
+                            const rp = (property as any).rent_price ?? property.rentPrice;
+                            if (sp) return `R$ ${Number(sp).toLocaleString('pt-BR')}`;
+                            if (rp) return `R$ ${Number(rp).toLocaleString('pt-BR')}/mês`;
+                            return 'N/A';
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(property.status)}>
@@ -225,6 +236,17 @@ export default function PropertiesAdmin() {
                         <TableCell>{property.ownerName || "—"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/imoveis/${property.id}`);
+                                toast.success('Link copiado!');
+                              }}
+                              title="Copiar link público"
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"

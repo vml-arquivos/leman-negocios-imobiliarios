@@ -41,7 +41,13 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
-  const displayPrice = (property as any)?.sale_price ?? (property as any)?.price ?? 0;
+  const displayPrice =
+    (property as any)?.sale_price ??
+    (property as any)?.salePrice ??
+    (property as any)?.rent_price ??
+    (property as any)?.rentPrice ??
+    (property as any)?.price ?? 0;
+  const isRent = !!(((property as any)?.rent_price ?? (property as any)?.rentPrice) && !((property as any)?.sale_price ?? (property as any)?.salePrice));
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { addProperty, removeProperty, isSelected, canAddMore } = useCompare();
@@ -79,7 +85,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     window.open(`https://wa.me/5561998687245?text=${message}`, "_blank");
   };
 
-  const coverImage = property.images[0] || "/imoveis/sala-moderna-1.jpg";
+  const p = property as any;
+  const coverImage =
+    (typeof p.main_image === "string" && p.main_image ? p.main_image : null) ??
+    (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null) ??
+    (property.images && property.images.length > 0 ? property.images[0] : null) ??
+    "/imoveis/sala-moderna-1.jpg";
+  const imageCount = Array.isArray(p.images) ? p.images.length : property.images?.length ?? 0;
 
   return (
     <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white rounded-xl">
@@ -161,9 +173,9 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           </div>
 
           {/* Image Counter */}
-          {property.images.length > 1 && (
+          {imageCount > 1 && (
             <div className="absolute bottom-3 right-3 bg-[#1a1f3c]/90 text-white px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-sm">
-              +{property.images.length - 1} fotos
+              +{imageCount - 1} fotos
             </div>
           )}
 
@@ -182,11 +194,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         <div className="mb-3">
           <p className="text-2xl font-bold text-[#1a1f3c]">
             {formatPrice(displayPrice)}
-            {property.transactionType === "aluguel" && (
+            {isRent && (
               <span className="text-sm text-gray-500 font-normal">/mês</span>
             )}
           </p>
-          {property.transactionType === "venda" && displayPrice > 100000000 && (
+          {!isRent && displayPrice > 100000000 && (
             <p className="text-xs text-gray-500 mt-1">
               Parcelas a partir de {formatPrice(displayPrice / 360)}/mês*
             </p>

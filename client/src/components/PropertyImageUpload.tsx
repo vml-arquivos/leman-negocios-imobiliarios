@@ -1,8 +1,6 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
-import { Upload, X, Star, Loader2 } from "lucide-react";
+import { Upload, X, Star, Loader2, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 
 interface PropertyImageUploadProps {
@@ -13,229 +11,207 @@ interface PropertyImageUploadProps {
 export default function PropertyImageUpload({ propertyId, onUploadComplete }: PropertyImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+  const dragSrcId = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const utils = trpc.useUtils();
+
   const { data: images, isLoading } = trpc.propertyImages.list.useQuery({ propertyId });
-  
+
   const uploadFileMutation = trpc.propertyImages.uploadFile.useMutation({
-    onSuccess: () => {
-      utils.propertyImages.list.invalidate({ propertyId });
-    },
-    onError: (error) => {
-      toast.error(`Erro ao enviar imagem: ${error.message}`);
-    },
+    onSuccess: () => { utils.propertyImages.list.invalidate({ propertyId }); onUploadComplete?.(); },
+    onError: (e) => toast.error(`Erro ao enviar imagem: ${e.message}`),
   });
 
   const deleteMutation = trpc.propertyImages.delete.useMutation({
-    onSuccess: () => {
-      utils.propertyImages.list.invalidate({ propertyId });
-      toast.success("Imagem removida com sucesso!");
-    },
+    onSuccess: () => { utils.propertyImages.list.invalidate({ propertyId }); toast.success("Imagem removida!"); },
   });
 
   const setMainMutation = trpc.propertyImages.setMain.useMutation({
-    onSuccess: () => {
-      utils.propertyImages.list.invalidate({ propertyId });
-      toast.success("Imagem principal definida!");
-    },
+    onSuccess: () => { utils.propertyImages.list.invalidate({ propertyId }); toast.success("Imagem principal definida!"); },
   });
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  const reorderMutation = trpc.propertyImages.reorder.useMutation({
+    onSuccess: () => utils.propertyImages.list.invalidate({ propertyId }),
+    onError: () => toast.error("Erro ao reordenar imagens"),
+  });
 
+  const handleFileSelect = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
     setUploading(true);
     setUploadProgress(0);
-
     try {
-      const totalFiles = files.length;
-      
-      for (let i = 0; i < totalFiles; i++) {
+      const total = files.length;
+      for (let i = 0; i < total; i++) {
         const file = files[i];
-        
-        // Validar tipo de arquivo: aceitar PNG, JPEG, WebP e TIFF
-        const allowedMimes = [
-          'image/png',
-          'image/jpeg',
-          'image/webp',
-          'image/tiff',
-          'application/tiff', // alguns browsers enviam assim
-        ];
-        const allowedExts = ['.png', '.jpg', '.jpeg', '.webp', '.tif', '.tiff'];
-        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-        const mimeOk = allowedMimes.includes(file.type);
-        const extOk = allowedExts.includes(ext);
-        if (!mimeOk && !extOk) {
-          toast.error(`${file.name} não é uma imagem válida (aceito: PNG, JPG, WebP, TIFF)`);
+        const allowedMimes = ["image/png","image/jpeg","image/webp","image/tiff","application/tiff"];
+        const allowedExts = [".png",".jpg",".jpeg",".webp",".tif",".tiff"];
+        const ext = "." + file.name.split(".").pop()?.toLowerCase();
+        if (!allowedMimes.includes(file.type) && !allowedExts.includes(ext)) {
+          toast.error(`${file.name}: tipo invalido (PNG, JPG, WebP, TIFF)`);
           continue;
         }
-
-        // Validar tamanho (máximo 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`${file.name} é muito grande (máximo 5MB)`);
-          continue;
-        }
-
-        // Converter arquivo para base64
-        const fileData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
+        if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name}: maximo 5MB`); continue; }
+        const fileData = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.onerror = rej;
+          r.readAsDataURL(file);
         });
-
-        // Upload via tRPC mutation
         await uploadFileMutation.mutateAsync({
-          propertyId,
-          filename: file.name,
-          contentType: file.type,
+          propertyId, filename: file.name,
+          contentType: file.type || "image/jpeg",
           fileData,
-          isMain: images?.length === 0 && i === 0, // Primeira imagem é principal
+          isMain: (!images || images.length === 0) && i === 0,
         });
-
-        setUploadProgress(((i + 1) / totalFiles) * 100);
+        setUploadProgress(Math.round(((i + 1) / total) * 100));
       }
-
-      toast.success(`${totalFiles} ${totalFiles === 1 ? 'imagem enviada' : 'imagens enviadas'} com sucesso!`);
-
-      if (onUploadComplete) {
-        onUploadComplete();
-      }
-    } catch (error) {
-      console.error("Erro no upload:", error);
-      toast.error("Erro ao fazer upload das imagens");
+      toast.success(`${total} imagem(ns) enviada(s)!`);
     } finally {
       setUploading(false);
       setUploadProgress(0);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleDelete = async (imageId: number) => {
-    if (!confirm("Tem certeza que deseja remover esta imagem?")) return;
-    await deleteMutation.mutateAsync({ propertyId, imageId });
+  // Drag-and-drop reorder handlers
+  const handleDragStart = (e: React.DragEvent, id: number) => {
+    dragSrcId.current = id;
+    e.dataTransfer.effectAllowed = "move";
   };
-
-  const handleSetMain = async (imageId: number) => {
-    await setMainMutation.mutateAsync({ imageId, propertyId });
+  const handleDragOver = (e: React.DragEvent, id: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(id);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const handleDrop = (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    setDragOverId(null);
+    const srcId = dragSrcId.current;
+    if (!srcId || srcId === targetId || !images) return;
+    const ids = (images as any[]).map((img) => img.id);
+    const si = ids.indexOf(srcId);
+    const ti = ids.indexOf(targetId);
+    if (si === -1 || ti === -1) return;
+    const newIds = [...ids];
+    newIds.splice(si, 1);
+    newIds.splice(ti, 0, srcId);
+    reorderMutation.mutate({ propertyId, orderedIds: newIds });
+  };
+  const handleDragEnd = () => { dragSrcId.current = null; setDragOverId(null); };
 
   return (
-    <div className="space-y-6">
-      {/* Upload Area */}
-      <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
-        <div className="p-8">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/tiff,.tif,.tiff,.png,.jpg,.jpeg,.webp"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-            id="image-upload"
-            disabled={uploading}
-          />
-          <label
-            htmlFor="image-upload"
-            className={`flex flex-col items-center justify-center ${uploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-          >
-            <div className="p-4 rounded-full bg-primary/10 mb-4">
-              {uploading ? (
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              ) : (
-                <Upload className="h-8 w-8 text-primary" />
-              )}
+    <div className="space-y-4">
+      {/* Drop zone */}
+      <div
+        className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); handleFileSelect(e.dataTransfer.files); }}
+      >
+        {uploading ? (
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Enviando... {uploadProgress}%</p>
+            <div className="w-48 bg-muted rounded-full h-2">
+              <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2">
-              {uploading ? "Enviando imagens..." : "Clique para fazer upload"}
-            </h3>
-            <p className="text-sm text-muted-foreground text-center">
-              ou arraste e solte suas imagens aqui
-              <br />
-              <span className="text-xs">PNG, JPG, WebP, TIFF até 5MB cada</span>
-            </p>
-            {uploading && (
-              <div className="w-full max-w-xs mt-4">
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <Upload className="h-10 w-10 text-muted-foreground" />
+            <p className="text-sm font-medium">Clique para selecionar imagens ou arraste aqui</p>
+            <p className="text-xs text-muted-foreground">PNG, JPG, WebP, TIFF — maximo 5MB por arquivo</p>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/tiff,.tif,.tiff,.png,.jpg,.jpeg,.webp"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFileSelect(e.target.files)}
+        />
+      </div>
+
+      {/* Image grid with drag-and-drop reorder */}
+      {isLoading ? (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : images && images.length > 0 ? (
+        <div>
+          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+            <GripVertical className="h-3 w-3" /> Arraste para reordenar · Estrela define imagem principal
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {(images as any[]).map((image) => (
+              <div
+                key={image.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, image.id)}
+                onDragOver={(e) => handleDragOver(e, image.id)}
+                onDrop={(e) => handleDrop(e, image.id)}
+                onDragEnd={handleDragEnd}
+                className={`relative group rounded-lg overflow-hidden border-2 transition-all cursor-grab active:cursor-grabbing ${
+                  image.is_main
+                    ? "border-primary shadow-md"
+                    : dragOverId === image.id
+                    ? "border-primary/60 scale-105"
+                    : "border-transparent hover:border-border"
+                }`}
+              >
+                <div className="aspect-[4/3] bg-muted">
+                  <img
+                    src={image.url}
+                    alt={image.caption || `Imagem ${image.id}`}
+                    className="w-full h-full object-cover"
+                    draggable={false}
                   />
                 </div>
-                <p className="text-xs text-center mt-2 text-muted-foreground">
-                  {Math.round(uploadProgress)}%
-                </p>
-              </div>
-            )}
-          </label>
-        </div>
-      </Card>
-
-      {/* Images Grid */}
-      {images && images.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {images.map((image) => (
-            <Card key={image.id} className="relative group overflow-hidden">
-              <div className="aspect-square relative">
-                <img
-                  src={image.url}
-                  alt={image.caption || "Imagem do imóvel"}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback para imagem quebrada
-                    e.currentTarget.src = 'https://via.placeholder.com/400x400?text=Imagem+não+encontrada';
-                  }}
-                />
-                
-                {/* Badge de imagem principal */}
+                {/* Drag handle indicator */}
+                <div className="absolute top-1 left-1 bg-black/50 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <GripVertical className="h-3 w-3 text-white" />
+                </div>
+                {/* Principal badge */}
                 {image.is_main && (
-                  <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-current" />
+                  <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded font-medium">
                     Principal
                   </div>
                 )}
-                
-                {/* Overlay com ações */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <Button
-                    size="sm"
-                    variant={image.is_main ? "default" : "secondary"}
-                    onClick={() => handleSetMain(image.id)}
-                    disabled={setMainMutation.isPending}
-                    title="Definir como principal"
-                  >
-                    <Star className={`h-4 w-4 ${image.is_main ? 'fill-current' : ''}`} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(image.id)}
+                {/* Actions overlay */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  {!image.is_main && (
+                    <button
+                      onClick={() => setMainMutation.mutate({ imageId: image.id, propertyId })}
+                      disabled={setMainMutation.isPending}
+                      title="Definir como principal"
+                      className="bg-yellow-400 hover:bg-yellow-500 text-black p-1.5 rounded-full transition-colors"
+                    >
+                      <Star className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (confirm("Remover esta imagem?")) {
+                        deleteMutation.mutate({ imageId: image.id, propertyId });
+                      }
+                    }}
                     disabled={deleteMutation.isPending}
                     title="Remover imagem"
+                    className="bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors"
                   >
                     <X className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
-            </Card>
-          ))}
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>Nenhuma imagem adicionada ainda.</p>
-          <p className="text-sm">Clique no botão acima para fazer upload.</p>
-        </div>
+        <p className="text-sm text-muted-foreground text-center py-2">
+          Nenhuma imagem cadastrada ainda.
+        </p>
       )}
     </div>
   );
