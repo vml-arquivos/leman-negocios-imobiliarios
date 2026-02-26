@@ -40,6 +40,7 @@ import LoginSimple from "./pages/auth/LoginSimple";
 import Settings from "./pages/admin/Settings";
 import FinancingInbox from "./pages/admin/FinancingInbox";
 import WhatsAppInbox from "./pages/admin/WhatsAppInbox";
+import ClientPortal from "./pages/ClientPortal";
 
 function Router() {
   return (
@@ -195,6 +196,7 @@ function Router() {
       <Route path="/proprietario">
         {() => <OwnerPortal />}
       </Route>
+      <Route path="/portal-cliente" component={ClientPortal} />
       
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

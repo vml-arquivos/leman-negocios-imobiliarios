@@ -9,7 +9,8 @@ import { computeLeadScore } from "./crm/score";
 import { computeNextAction } from "./crm/nextAction";
 // [FASE2-DISABLED] // import * as rentalMgmt from "./rental-management"; // DISABLED
 import { getDb } from "./db";
-import { eq, desc, asc, gte, sql, isNull } from "drizzle-orm";
+import { eq, desc, asc, gte, sql, isNull, inArray } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import {financingSimulations, leads, rentalPayments, properties, landlords, owners, propertyImages, campaignSources, interactions, transactions, commissions, contracts, financialCategories, analyticsEvents, reviews} from "../drizzle/schema";
 // tenants não existe no schema real — usar stub
 const tenants = leads; // backward compat stub
@@ -238,10 +239,14 @@ const propertiesRouter = router({
       neighborhood: z.string().optional(),
       minPrice: z.number().optional(),
       maxPrice: z.number().optional(),
+      minRent: z.number().optional(),
+      maxRent: z.number().optional(),
       minArea: z.number().optional(),
       maxArea: z.number().optional(),
       bedrooms: z.number().optional(),
       bathrooms: z.number().optional(),
+      parkingSpaces: z.number().optional(),
+      sort: z.enum(['recent','price_asc','price_desc','rent_asc','rent_desc']).optional(),
     }).optional())
     .query(async ({ input }) => {
       const result = await db.listProperties(input || {});
@@ -2675,6 +2680,48 @@ const whatsappInboxRouter = router({
     }),
 });
 
+// ============================================================
+// CLIENT PORTAL ROUTER
+// ============================================================
+const clientPortalRouter = router({
+  login: publicProcedure
+    .input(z.object({ cpf: z.string(), birthDate: z.string() }))
+    .mutation(async ({ input }) => {
+      const dbi = await getDb();
+      if (!dbi) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const cpfClean = input.cpf.replace(/\D/g, '');
+      const allLeads = await dbi.select().from(leads).where(eq(leads.cpf as any, cpfClean)).limit(1);
+      const lead = allLeads[0];
+      if (!lead) throw new TRPCError({ code: 'NOT_FOUND', message: 'CPF não encontrado' });
+      const meta = (lead.metadata as any) || {};
+      if (meta.data_nascimento && meta.data_nascimento !== input.birthDate) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Data de nascimento incorreta' });
+      }
+      const token = Buffer.from(`${lead.id}:${Date.now()}`).toString('base64');
+      await dbi.update(leads).set({ metadata: { ...meta, portal_token: token, portal_token_at: new Date().toISOString() } } as any).where(eq(leads.id, lead.id));
+      return { token, leadId: lead.id, name: lead.nome };
+    }),
+
+  dashboard: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      const dbi = await getDb();
+      if (!dbi) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const allLeads = await dbi.select().from(leads);
+      const lead = allLeads.find((l: any) => (l.metadata as any)?.portal_token === input.token);
+      if (!lead) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Token inválido ou expirado' });
+      const myContracts = await dbi.select().from(contracts).where(eq(contracts.lead_id, lead.id));
+      const myTransactions = myContracts.length > 0
+        ? await dbi.select().from(transactions).where(inArray(transactions.contract_id, myContracts.map((c: any) => c.id)))
+        : [];
+      return {
+        lead: { id: lead.id, nome: lead.nome, email: lead.email, telefone: lead.telefone },
+        contracts: myContracts,
+        transactions: myTransactions,
+      };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
@@ -2694,6 +2741,7 @@ export const appRouter = router({
   clients: clientsRouter,
   webhooks: webhooksRouter,
   whatsappInbox: whatsappInboxRouter,
+  clientPortal: clientPortalRouter,
 });
 
 export type AppRouter = typeof appRouter;

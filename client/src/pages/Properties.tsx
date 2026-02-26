@@ -11,105 +11,95 @@ import { Grid3x3, List } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function Properties() {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"recent" | "price_asc" | "price_desc">("recent");
-  
+
   const [filters, setFilters] = useState<PropertyFilters>({
-    transactionType: "venda",
+    transactionType: "",
     propertyType: "",
     neighborhood: "",
     minPrice: 0,
-    maxPrice: 5000000,
+    maxPrice: 0,
     bedrooms: "",
     features: [],
   });
 
+  const [urlMinArea, setUrlMinArea] = useState<number | undefined>(undefined);
+  const [urlParkingSpaces, setUrlParkingSpaces] = useState<number | undefined>(undefined);
+
   // Ler query params da URL ao carregar
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const finalidade = params.get("finalidade");
-    const tipo = params.get("tipo");
-    const bairro = params.get("bairro");
-    
-    if (finalidade || tipo || bairro) {
-      setFilters(prev => ({
-        ...prev,
-        transactionType: finalidade === "aluguel" ? "aluguel" : "venda",
-        propertyType: tipo || "",
-        neighborhood: bairro || "",
-      }));
-    }
+    const finalidade = params.get("finalidade") || "";
+    const tipo = params.get("tipo") || "";
+    const bairro = params.get("bairro") || "";
+    const precoMin = params.get("precoMin");
+    const precoMax = params.get("precoMax");
+    const areaMin = params.get("areaMin");
+    const quartos = params.get("quartos") || "";
+    const vagas = params.get("vagas");
+    const ordenar = params.get("ordenar") || "";
+
+    setFilters(prev => ({
+      ...prev,
+      transactionType: finalidade,
+      propertyType: tipo,
+      neighborhood: bairro,
+      minPrice: precoMin ? Number(precoMin) : 0,
+      maxPrice: precoMax ? Number(precoMax) : 0,
+      bedrooms: quartos,
+    }));
+    if (areaMin) setUrlMinArea(Number(areaMin));
+    if (vagas) setUrlParkingSpaces(Number(vagas));
+    if (ordenar === "price_asc" || ordenar === "price_desc") setSortBy(ordenar as any);
+    else if (ordenar) setSortBy("recent");
   }, [location]);
 
-  const { data: propertiesData, isLoading } = trpc.properties.list.useQuery();
-
-  // Converter dados do backend para formato do PropertyCard
-  const convertedProperties: Property[] = propertiesData
-    ? propertiesData.map((p) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description || "",
-        price: Number(p.salePrice || p.rentPrice || 0),
-        transactionType: p.transactionType === "locacao" ? "aluguel" : "venda",
-        propertyType: p.type || "Apartamento",
-        neighborhood: p.neighborhood || "",
-        city: p.city || "Brasília",
-        bedrooms: p.bedrooms || 0,
-        bathrooms: p.bathrooms || 0,
-        area: Number(p.totalArea || 0),
-        garageSpaces: p.parkingSpaces || 0,
-        images: p.coverImage ? [p.coverImage] : [],
-        featured: false,
-        createdAt: p.createdAt || new Date(),
-      }))
-    : [];
-
-  // Filtrar imóveis
-  const filteredProperties = convertedProperties.filter((property) => {
-    // Filtro de finalidade
-    if (filters.transactionType && property.transactionType !== filters.transactionType) {
-      return false;
-    }
-
-    // Filtro de tipo
-    if (filters.propertyType && property.propertyType?.toLowerCase() !== filters.propertyType?.toLowerCase()) {
-      return false;
-    }
-
-    // Filtro de bairro
-    if (filters.neighborhood && property.neighborhood !== filters.neighborhood) {
-      return false;
-    }
-
-    // Filtro de preço
-    if (property.price < filters.minPrice || property.price > filters.maxPrice) {
-      return false;
-    }
-
-    // Filtro de quartos
-    if (filters.bedrooms) {
-      const minBedrooms = parseInt(filters.bedrooms.replace("+", ""));
-      if (property.bedrooms < minBedrooms) {
-        return false;
-      }
-    }
-
-    // TODO: Implementar filtro de características quando o backend suportar
-    
-    return true;
+  const { data: propertiesData, isLoading } = trpc.properties.list.useQuery({
+    transactionType: filters.transactionType || undefined,
+    propertyType: filters.propertyType || undefined,
+    neighborhood: filters.neighborhood || undefined,
+    minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
+    maxPrice: filters.maxPrice > 0 ? filters.maxPrice : undefined,
+    bedrooms: filters.bedrooms ? Number(filters.bedrooms) : undefined,
+    minArea: urlMinArea,
+    parkingSpaces: urlParkingSpaces,
+    sort: sortBy,
+    published: true,
   });
 
-  // Ordenar imóveis
-  const sortedProperties = [...filteredProperties].sort((a, b) => {
-    if (sortBy === "price_asc") {
-      return a.price - b.price;
-    } else if (sortBy === "price_desc") {
-      return b.price - a.price;
-    } else {
-      // recent
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
+  // Suporta tanto { items: [...] } quanto array direto
+  const rawList: any[] = Array.isArray(propertiesData)
+    ? propertiesData
+    : (propertiesData as any)?.items ?? [];
+
+  // Converter dados do backend para formato do PropertyCard
+  const convertedProperties: Property[] = rawList.map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    description: p.description || "",
+    price: Number(p.sale_price || p.rent_price || 0),
+    transactionType: p.transaction_type === "locacao" ? "aluguel" : "venda",
+    propertyType: p.property_type || "Apartamento",
+    neighborhood: p.neighborhood || "",
+    city: p.city || "Brasília",
+    bedrooms: p.bedrooms || 0,
+    bathrooms: p.bathrooms || 0,
+    area: Number(p.total_area || 0),
+    garageSpaces: p.parking_spaces || 0,
+    images: Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : p.main_image ? [p.main_image] : [],
+    featured: p.featured || false,
+    createdAt: p.created_at || new Date(),
+  }));
+
+  // Ordenação client-side como fallback
+  const sortedProperties = [...convertedProperties].sort((a, b) => {
+    if (sortBy === "price_asc") return a.price - b.price;
+    if (sortBy === "price_desc") return b.price - a.price;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
   const resultCount = sortedProperties.length;
@@ -168,7 +158,7 @@ export default function Properties() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Ordenar por:</span>
               <select
-                className="border rounded-md px-3 py-2 text-sm bg-white"
+                className="border rounded-md px-3 py-2 text-sm bg-background text-foreground"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
               >
@@ -202,15 +192,11 @@ export default function Properties() {
               <p className="text-muted-foreground mb-6">
                 Tente ajustar os filtros para encontrar mais opções
               </p>
-              <Button onClick={() => setFilters({
-                transactionType: "venda",
-                propertyType: "",
-                neighborhood: "",
-                minPrice: 0,
-                maxPrice: 5000000,
-                bedrooms: "",
-                features: [],
-              })}>
+              <Button onClick={() => {
+                setFilters({ transactionType: "", propertyType: "", neighborhood: "", minPrice: 0, maxPrice: 0, bedrooms: "", features: [] });
+                setUrlMinArea(undefined);
+                setUrlParkingSpaces(undefined);
+              }}>
                 Limpar Filtros
               </Button>
             </div>

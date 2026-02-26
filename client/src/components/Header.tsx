@@ -13,6 +13,7 @@ export default function Header() {
     { name: "Quem Somos", href: "/quem-somos" },
     { name: "Blog", href: "/blog" },
     { name: "Contato", href: "/contato" },
+    { name: "Portal do Cliente", href: "/portal-cliente" },
   ];
 
   return (

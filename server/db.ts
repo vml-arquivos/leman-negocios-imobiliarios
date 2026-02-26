@@ -219,10 +219,14 @@ export async function listProperties(params: {
   neighborhood?: string;
   minPrice?: number;
   maxPrice?: number;
+  minRent?: number;
+  maxRent?: number;
   minArea?: number;
   maxArea?: number;
   bedrooms?: number;
   bathrooms?: number;
+  parkingSpaces?: number;
+  sort?: 'recent'|'price_asc'|'price_desc'|'rent_asc'|'rent_desc';
   limit?: number;
   offset?: number;
   search?: string;
@@ -243,10 +247,13 @@ export async function listProperties(params: {
   if (params.bedrooms)        conditions.push(eq(properties.bedrooms, params.bedrooms));
   if (params.bathrooms)       conditions.push(eq(properties.bathrooms, params.bathrooms));
 
-  if (params.minPrice) conditions.push(gte(properties.sale_price, String(params.minPrice)));
-  if (params.maxPrice) conditions.push(lte(properties.sale_price, String(params.maxPrice)));
-  if (params.minArea)  conditions.push(gte(properties.total_area,  String(params.minArea)));
-  if (params.maxArea)  conditions.push(lte(properties.total_area,  String(params.maxArea)));
+  if (params.minPrice)     conditions.push(gte(properties.sale_price, String(params.minPrice)));
+  if (params.maxPrice)     conditions.push(lte(properties.sale_price, String(params.maxPrice)));
+  if (params.minRent)      conditions.push(gte(properties.rent_price, String(params.minRent)));
+  if (params.maxRent)      conditions.push(lte(properties.rent_price, String(params.maxRent)));
+  if (params.minArea)      conditions.push(gte(properties.total_area,  String(params.minArea)));
+  if (params.maxArea)      conditions.push(lte(properties.total_area,  String(params.maxArea)));
+  if (params.parkingSpaces) conditions.push(eq(properties.parking_spaces, params.parkingSpaces));
 
   if (params.search) {
     conditions.push(
@@ -260,11 +267,17 @@ export async function listProperties(params: {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+  const sortOrder = params.sort === 'price_asc'  ? asc(properties.sale_price)
+                  : params.sort === 'price_desc' ? desc(properties.sale_price)
+                  : params.sort === 'rent_asc'   ? asc(properties.rent_price)
+                  : params.sort === 'rent_desc'  ? desc(properties.rent_price)
+                  : desc(properties.created_at);
+
   const items = await database
     .select()
     .from(properties)
     .where(whereClause)
-    .orderBy(desc(properties.created_at))
+    .orderBy(sortOrder)
     .limit(params.limit || 50)
     .offset(params.offset || 0);
 

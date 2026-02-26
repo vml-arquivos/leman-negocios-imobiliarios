@@ -85,18 +85,24 @@ function FeaturedProperties() {
                     );
                   })()}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  {/* Badge tipo */}
+                  <div className="absolute top-3 left-3">
+                    <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded">
+                      {property.transaction_type === 'locacao' ? 'Aluguel' : property.transaction_type === 'ambos' ? 'Venda/Aluguel' : 'Venda'}
+                    </span>
+                  </div>
                   <div className="absolute bottom-4 left-4 text-white">
                     <span className="text-2xl font-bold">
-                      {property.price
-                        ? formatCurrency(property.price)
-                        : property.rental_price
-                        ? formatRent(property.rental_price)
+                      {property.sale_price && Number(property.sale_price) > 0
+                        ? `R$ ${Number(property.sale_price).toLocaleString('pt-BR')}`
+                        : property.rent_price && Number(property.rent_price) > 0
+                        ? `R$ ${Number(property.rent_price).toLocaleString('pt-BR')}/mês`
                         : 'Consulte'}
                     </span>
                   </div>
                 </div>
                 <CardContent className="p-6">
-                  <h3 className="text-xl font-bold mb-2">{property.title}</h3>
+                  <h3 className="text-xl font-bold mb-2 line-clamp-2">{property.title}</h3>
                   <p className="text-muted-foreground text-sm mb-4 flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
                     {property.neighborhood}, {property.city}
@@ -112,9 +118,9 @@ function FeaturedProperties() {
                         <Bath className="h-4 w-4" /> {property.bathrooms}
                       </span>
                     )}
-                    {property.totalArea && (
+                    {property.total_area && (
                       <span className="flex items-center gap-1">
-                        <Maximize className="h-4 w-4" /> {property.totalArea}m²
+                        <Maximize className="h-4 w-4" /> {property.total_area}m²
                       </span>
                     )}
                   </div>
@@ -190,18 +196,23 @@ function AllProperties() {
                   );
                 })()}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute top-3 left-3">
+                  <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded">
+                    {property.transaction_type === 'locacao' ? 'Aluguel' : property.transaction_type === 'ambos' ? 'Venda/Aluguel' : 'Venda'}
+                  </span>
+                </div>
                 <div className="absolute bottom-4 left-4 text-white">
                   <span className="text-2xl font-bold">
-                    {property.price
-                      ? formatCurrency(property.price)
-                      : property.rental_price
-                      ? formatRent(property.rental_price)
+                    {property.sale_price && Number(property.sale_price) > 0
+                      ? `R$ ${Number(property.sale_price).toLocaleString('pt-BR')}`
+                      : property.rent_price && Number(property.rent_price) > 0
+                      ? `R$ ${Number(property.rent_price).toLocaleString('pt-BR')}/mês`
                       : 'Consulte'}
                   </span>
                 </div>
               </div>
               <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-2">{property.title}</h3>
+                <h3 className="text-xl font-bold mb-2 line-clamp-2">{property.title}</h3>
                 <p className="text-muted-foreground text-sm mb-4 flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
                   {property.neighborhood}, {property.city}
@@ -217,9 +228,9 @@ function AllProperties() {
                       <Bath className="h-4 w-4" /> {property.bathrooms}
                     </span>
                   )}
-                  {property.totalArea && (
+                  {property.total_area && (
                     <span className="flex items-center gap-1">
-                      <Maximize className="h-4 w-4" /> {property.totalArea}m²
+                      <Maximize className="h-4 w-4" /> {property.total_area}m²
                     </span>
                   )}
                 </div>
@@ -396,7 +407,14 @@ export default function Home() {
     transactionType: '',
     propertyType: '',
     neighborhood: '',
+    minPrice: '',
+    maxPrice: '',
+    minArea: '',
+    bedrooms: '',
+    parkingSpaces: '',
+    sort: '',
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Buscar configurações do site
   const { data: settings } = trpc.settings.get.useQuery();
@@ -408,6 +426,12 @@ export default function Home() {
       transactionType: params.get("finalidade") || "",
       propertyType: params.get("tipo") || "",
       neighborhood: params.get("bairro") || "",
+      minPrice: params.get("precoMin") || "",
+      maxPrice: params.get("precoMax") || "",
+      minArea: params.get("areaMin") || "",
+      bedrooms: params.get("quartos") || "",
+      parkingSpaces: params.get("vagas") || "",
+      sort: params.get("ordenar") || "",
     });
   }, []);
 
@@ -416,7 +440,12 @@ export default function Home() {
     if (searchParams.transactionType) params.set("finalidade", searchParams.transactionType);
     if (searchParams.propertyType) params.set("tipo", searchParams.propertyType);
     if (searchParams.neighborhood) params.set("bairro", searchParams.neighborhood);
-    
+    if (searchParams.minPrice) params.set("precoMin", searchParams.minPrice);
+    if (searchParams.maxPrice) params.set("precoMax", searchParams.maxPrice);
+    if (searchParams.minArea) params.set("areaMin", searchParams.minArea);
+    if (searchParams.bedrooms) params.set("quartos", searchParams.bedrooms);
+    if (searchParams.parkingSpaces) params.set("vagas", searchParams.parkingSpaces);
+    if (searchParams.sort) params.set("ordenar", searchParams.sort);
     const queryString = params.toString();
     setLocation(`/imoveis${queryString ? `?${queryString}` : ""}`);
   };
@@ -503,14 +532,79 @@ export default function Home() {
                 </Select>
               </div>
 
-              <Button 
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
-                size="lg"
-                onClick={handleSearch}
-              >
-                <Search className="mr-2 h-5 w-5" />
-                Buscar Imóveis
-              </Button>
+              {/* Filtros avançados */}
+              {showAdvanced && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                  <Input
+                    type="number"
+                    placeholder="Preço mín (R$)"
+                    value={searchParams.minPrice}
+                    onChange={e => setSearchParams(prev => ({ ...prev, minPrice: e.target.value }))}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Preço máx (R$)"
+                    value={searchParams.maxPrice}
+                    onChange={e => setSearchParams(prev => ({ ...prev, maxPrice: e.target.value }))}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Área mín (m²)"
+                    value={searchParams.minArea}
+                    onChange={e => setSearchParams(prev => ({ ...prev, minArea: e.target.value }))}
+                  />
+                  <Select
+                    value={searchParams.bedrooms}
+                    onValueChange={v => setSearchParams(prev => ({ ...prev, bedrooms: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Quartos" /></SelectTrigger>
+                    <SelectContent>
+                      {[1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}+ quartos</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={searchParams.parkingSpaces}
+                    onValueChange={v => setSearchParams(prev => ({ ...prev, parkingSpaces: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Vagas" /></SelectTrigger>
+                    <SelectContent>
+                      {[1,2,3,4].map(n => <SelectItem key={n} value={String(n)}>{n}+ vagas</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={searchParams.sort}
+                    onValueChange={v => setSearchParams(prev => ({ ...prev, sort: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Ordenar por" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recent">Mais recentes</SelectItem>
+                      <SelectItem value="price_asc">Menor preço</SelectItem>
+                      <SelectItem value="price_desc">Maior preço</SelectItem>
+                      <SelectItem value="rent_asc">Menor aluguel</SelectItem>
+                      <SelectItem value="rent_desc">Maior aluguel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={() => setShowAdvanced(v => !v)}
+                >
+                  {showAdvanced ? '▲ Menos filtros' : '▼ Mais filtros'}
+                </Button>
+                <Button 
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground" 
+                  size="lg"
+                  onClick={handleSearch}
+                >
+                  <Search className="mr-2 h-5 w-5" />
+                  Buscar Imóveis
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -607,15 +701,11 @@ export default function Home() {
                 />
               ) : (
                 <div className="bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center h-full">
-                  <div className="text-center p-8">
-                    <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-white/90 flex items-center justify-center">
-                      <svg className="w-20 h-20 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                      </svg>
-                    </div>
-                    <h3 className="text-3xl font-bold text-primary mb-2">LEMAN</h3>
-                    <p className="text-lg text-muted-foreground">Negócios Imobiliários</p>
-                  </div>
+                  <img
+                    src="/logo-leman.jpg"
+                    alt="Leman Negócios Imobiliários"
+                    className="max-w-[220px] max-h-[180px] object-contain"
+                  />
                 </div>
               )}
             </div>
