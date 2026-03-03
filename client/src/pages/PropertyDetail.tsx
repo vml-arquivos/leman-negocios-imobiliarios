@@ -347,6 +347,53 @@ export default function PropertyDetail() {
                   </Card>
                 )}
 
+                {/* Vídeo do imóvel */}
+                {p.video_url && (() => {
+                  const videoUrl: string = p.video_url;
+                  const isYouTube = videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be");
+                  const isVimeo = videoUrl.includes("vimeo.com");
+                  const isDirectVideo = /\.(mp4|webm|ogg)$/i.test(videoUrl);
+
+                  let embedUrl = videoUrl;
+                  if (isYouTube) {
+                    const ytMatch = videoUrl.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
+                    if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+                  } else if (isVimeo) {
+                    const vimeoMatch = videoUrl.match(/vimeo\.com\/(\d+)/);
+                    if (vimeoMatch) embedUrl = `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+                  }
+
+                  return (
+                    <Card>
+                      <CardContent className="p-6">
+                        <h2 className="font-heading text-xl font-bold mb-4">Vídeo do Imóvel</h2>
+                        <div className="w-full aspect-[16/9] rounded-lg overflow-hidden border">
+                          {isDirectVideo ? (
+                            <video
+                              controls
+                              className="w-full h-full"
+                              src={videoUrl}
+                            >
+                              Seu navegador não suporta vídeo HTML5.
+                            </video>
+                          ) : (
+                            <iframe
+                              title="Vídeo do imóvel"
+                              src={embedUrl}
+                              width="100%"
+                              height="100%"
+                              style={{ border: 0 }}
+                              allowFullScreen
+                              loading="lazy"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
                 {/* Mapa embed */}
                 <Card>
                   <CardContent className="p-6">

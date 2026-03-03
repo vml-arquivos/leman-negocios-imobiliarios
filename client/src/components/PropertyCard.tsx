@@ -86,11 +86,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   };
 
   const p = property as any;
+  const tx = p.transaction_type ?? property.transactionType;
+  const isVenda = tx === "venda";
   const coverImage =
     (typeof p.main_image === "string" && p.main_image ? p.main_image : null) ??
     (Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null) ??
     (property.images && property.images.length > 0 ? property.images[0] : null) ??
-    "/imoveis/sala-moderna-1.jpg";
+    "/logo-leman.jpg";
   const imageCount = Array.isArray(p.images) ? p.images.length : property.images?.length ?? 0;
 
   return (
@@ -99,10 +101,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       <Link href={`/imoveis/${property.id}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-[#1a1f3c]">
           <img
-            src={imageError ? "/imoveis/sala-moderna-1.jpg" : coverImage}
+            src={imageError ? "/logo-leman.jpg" : coverImage}
             alt={property.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             onError={() => setImageError(true)}
+            onLoad={() => setImageError(false)}
             loading="lazy"
           />
           
@@ -129,12 +132,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <div className="absolute top-3 left-3 flex gap-2">
             <Badge 
               className={`font-semibold ${
-                property.transactionType === "venda" 
+                isVenda
                   ? "bg-[#c9a962] text-[#1a1f3c] hover:bg-[#b8944f]" 
                   : "bg-[#1a1f3c] text-[#c9a962] hover:bg-[#151933]"
               }`}
             >
-              {property.transactionType === "venda" ? "Venda" : "Aluguel"}
+              {isVenda ? "Venda" : "Aluguel"}
             </Badge>
             {property.featured && (
               <Badge className="bg-white/90 text-[#1a1f3c] hover:bg-white">

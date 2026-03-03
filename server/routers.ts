@@ -349,6 +349,8 @@ const propertiesRouter = router({
         features: z.string().optional(),
         images: z.string().optional(),
         mainImage: z.string().optional(),
+        video_url: z.string().optional(),
+        tourVirtualUrl: z.string().optional(),
         status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo"]).optional(),
         featured: z.boolean().optional(),
         published: z.boolean().optional(),
@@ -980,7 +982,6 @@ const propertyImagesRouter = router({
             caption: input.caption || null,
             display_order: 0,
             is_main: input.isMain ?? false,
-            storage_key: key,
           })
           .returning();
 
@@ -1027,7 +1028,6 @@ const propertyImagesRouter = router({
           caption: input.caption || null,
           display_order: input.displayOrder ?? 0,
           is_main: input.isMain ?? false,
-          storage_key: input.storageKey || null,
         })
         .returning();
 
@@ -1081,7 +1081,7 @@ const propertyImagesRouter = router({
         throw new Error('Database not available');
       }
 
-      // Buscar imagem para pegar storage_key
+      // Verificar se imagem existe antes de deletar
       const [image] = await database
         .select()
         .from(propertyImages)
@@ -1091,18 +1091,7 @@ const propertyImagesRouter = router({
         throw new Error('Imagem não encontrada');
       }
 
-      // Deletar do storage se tiver storage_key
-      if (image.storage_key) {
-        try {
-          const { deleteObject } = await import("./storage/supabase");
-          await deleteObject(image.storage_key);
-        } catch (error) {
-          console.error('Erro ao deletar imagem do storage:', error);
-          // Continua mesmo se falhar (imagem pode não existir mais)
-        }
-      }
-
-       // Deletar do DB
+      // Deletar do DB
       await database
         .delete(propertyImages)
         .where(eq(propertyImages.id, input.imageId));
