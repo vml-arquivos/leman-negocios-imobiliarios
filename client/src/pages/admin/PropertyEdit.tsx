@@ -29,15 +29,23 @@ export default function PropertyEdit() {
     description: string;
     propertyType: "casa" | "apartamento" | "cobertura" | "terreno" | "comercial" | "rural" | "lancamento";
     transactionType: "venda" | "locacao" | "ambos";
+    address: string;
     neighborhood: string;
     city: string;
     state: string;
+    zipCode: string;
     salePrice: number;
     rentPrice: number;
+    condoFee: number;
+    iptu: number;
     bedrooms: number;
     bathrooms: number;
+    suites: number;
     parkingSpaces: number;
     totalArea: number;
+    builtArea: number;
+    video_url: string;
+    tourVirtualUrl: string;
     status: "disponivel" | "reservado" | "vendido" | "alugado" | "inativo" | "geladeira";
     featured: boolean;
     ownerId: number | null;
@@ -46,15 +54,23 @@ export default function PropertyEdit() {
     description: "",
     propertyType: "casa",
     transactionType: "venda",
+    address: "",
     neighborhood: "",
     city: "Brasília",
     state: "DF",
+    zipCode: "",
     salePrice: 0,
     rentPrice: 0,
+    condoFee: 0,
+    iptu: 0,
     bedrooms: 0,
     bathrooms: 0,
+    suites: 0,
     parkingSpaces: 0,
     totalArea: 0,
+    builtArea: 0,
+    video_url: "",
+    tourVirtualUrl: "",
     status: "disponivel",
     featured: false,
     ownerId: null,
@@ -81,23 +97,33 @@ export default function PropertyEdit() {
 
   useEffect(() => {
     if (property) {
+      const p = property as any;
       setFormData({
-        title: property.title || "",
-        description: property.description || "",
-        propertyType: property.propertyType || "casa",
-        transactionType: property.transactionType || "venda",
-        neighborhood: property.neighborhood || "",
-        city: property.city || "Brasília",
-        state: property.state || "DF",
-        salePrice: property.salePrice || 0,
-        rentPrice: property.rentPrice || 0,
-        bedrooms: property.bedrooms || 0,
-        bathrooms: property.bathrooms || 0,
-        parkingSpaces: property.parkingSpaces || 0,
-        totalArea: property.totalArea || 0,
-        status: property.status || "disponivel",
-        featured: property.featured ? true : false,
-        ownerId: property.owner_id ? Number(property.owner_id) : (property.ownerId ? Number(property.ownerId) : null),
+        title: p.title || "",
+        description: p.description || "",
+        // snake_case tem prioridade, fallback para camelCase
+        propertyType: (p.property_type ?? p.propertyType) || "casa",
+        transactionType: (p.transaction_type ?? p.transactionType) || "venda",
+        address: p.address || "",
+        neighborhood: p.neighborhood || "",
+        city: p.city || "Brasília",
+        state: p.state || "DF",
+        zipCode: (p.zip_code ?? p.zipCode) || "",
+        salePrice: parseFloat(p.sale_price ?? p.salePrice ?? 0) || 0,
+        rentPrice: parseFloat(p.rent_price ?? p.rentPrice ?? 0) || 0,
+        condoFee: parseFloat(p.condo_fee ?? p.condoFee ?? 0) || 0,
+        iptu: parseFloat(p.iptu ?? 0) || 0,
+        bedrooms: parseInt(p.bedrooms ?? 0) || 0,
+        bathrooms: parseInt(p.bathrooms ?? 0) || 0,
+        suites: parseInt(p.suites ?? 0) || 0,
+        parkingSpaces: parseInt(p.parking_spaces ?? p.parkingSpaces ?? 0) || 0,
+        totalArea: parseFloat(p.total_area ?? p.totalArea ?? 0) || 0,
+        builtArea: parseFloat(p.built_area ?? p.builtArea ?? 0) || 0,
+        video_url: p.video_url || "",
+        tourVirtualUrl: (p.tour_virtual_url ?? p.tourVirtualUrl) || "",
+        status: (p.status || "disponivel") as any,
+        featured: p.featured ? true : false,
+        ownerId: p.owner_id ? Number(p.owner_id) : (p.ownerId ? Number(p.ownerId) : null),
       });
     }
   }, [property]);
@@ -138,6 +164,8 @@ export default function PropertyEdit() {
 );
   }
 
+  const p = property as any;
+
   return (
 <div className="space-y-6">
         {/* Header */}
@@ -153,7 +181,7 @@ export default function PropertyEdit() {
             <div>
               <h1 className="text-3xl font-bold">Editar Imóvel</h1>
               <p className="text-muted-foreground">
-                {property.referenceCode || `ID: ${property.id}`}
+                {(p.reference_code ?? p.referenceCode) || `ID: ${p.id}`}
               </p>
             </div>
           </div>
@@ -181,6 +209,8 @@ export default function PropertyEdit() {
 
           <TabsContent value="info" className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-6">
+
+              {/* Informações Básicas */}
               <Card>
                 <CardHeader>
                   <CardTitle>Informações Básicas</CardTitle>
@@ -213,6 +243,7 @@ export default function PropertyEdit() {
                           <SelectItem value="terreno">Terreno</SelectItem>
                           <SelectItem value="comercial">Comercial</SelectItem>
                           <SelectItem value="rural">Rural</SelectItem>
+                          <SelectItem value="lancamento">Lançamento</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -246,7 +277,6 @@ export default function PropertyEdit() {
                       </Select>
                     </div>
 
-
                     <div className="space-y-2">
                       <Label>Proprietário (interno)</Label>
                       <Select
@@ -273,7 +303,6 @@ export default function PropertyEdit() {
                       </p>
                     </div>
 
-
                     <div className="space-y-2">
                       <Label htmlFor="status">Status</Label>
                       <Select
@@ -293,6 +322,26 @@ export default function PropertyEdit() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Endereço */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Endereço</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="address">Endereço</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => handleChange('address', e.target.value)}
+                        placeholder="Ex: SQN 210, Bloco A, Apt 101"
+                      />
+                    </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="neighborhood">Bairro</Label>
@@ -302,13 +351,44 @@ export default function PropertyEdit() {
                         onChange={(e) => handleChange('neighborhood', e.target.value)}
                       />
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="zipCode">CEP</Label>
+                      <Input
+                        id="zipCode"
+                        value={formData.zipCode}
+                        onChange={(e) => handleChange('zipCode', e.target.value)}
+                        placeholder="00000-000"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Cidade</Label>
+                      <Input
+                        id="city"
+                        value={formData.city}
+                        onChange={(e) => handleChange('city', e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="state">Estado</Label>
+                      <Input
+                        id="state"
+                        value={formData.state}
+                        onChange={(e) => handleChange('state', e.target.value)}
+                        maxLength={2}
+                        placeholder="DF"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Valores */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Valores e Características</CardTitle>
+                  <CardTitle>Valores</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,7 +403,7 @@ export default function PropertyEdit() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="rentPrice">Preço de Locação (R$)</Label>
+                      <Label htmlFor="rentPrice">Preço de Locação (R$/mês)</Label>
                       <Input
                         id="rentPrice"
                         type="number"
@@ -331,9 +411,37 @@ export default function PropertyEdit() {
                         onChange={(e) => handleChange('rentPrice', parseFloat(e.target.value) || 0)}
                       />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="condoFee">Condomínio (R$/mês)</Label>
+                      <Input
+                        id="condoFee"
+                        type="number"
+                        value={formData.condoFee}
+                        onChange={(e) => handleChange('condoFee', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="iptu">IPTU (R$/ano)</Label>
+                      <Input
+                        id="iptu"
+                        type="number"
+                        value={formData.iptu}
+                        onChange={(e) => handleChange('iptu', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Características */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Características</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="bedrooms">Quartos</Label>
                       <Input
@@ -341,6 +449,16 @@ export default function PropertyEdit() {
                         type="number"
                         value={formData.bedrooms}
                         onChange={(e) => handleChange('bedrooms', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="suites">Suítes</Label>
+                      <Input
+                        id="suites"
+                        type="number"
+                        value={formData.suites}
+                        onChange={(e) => handleChange('suites', parseInt(e.target.value) || 0)}
                       />
                     </div>
 
@@ -355,7 +473,7 @@ export default function PropertyEdit() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="parkingSpaces">Vagas</Label>
+                      <Label htmlFor="parkingSpaces">Vagas de Garagem</Label>
                       <Input
                         id="parkingSpaces"
                         type="number"
@@ -365,7 +483,7 @@ export default function PropertyEdit() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="totalArea">Área (m²)</Label>
+                      <Label htmlFor="totalArea">Área Total (m²)</Label>
                       <Input
                         id="totalArea"
                         type="number"
@@ -373,9 +491,53 @@ export default function PropertyEdit() {
                         onChange={(e) => handleChange('totalArea', parseFloat(e.target.value) || 0)}
                       />
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="builtArea">Área Construída (m²)</Label>
+                      <Input
+                        id="builtArea"
+                        type="number"
+                        value={formData.builtArea}
+                        onChange={(e) => handleChange('builtArea', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Mídia */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mídia</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="video_url">URL do Vídeo</Label>
+                    <Input
+                      id="video_url"
+                      type="url"
+                      value={formData.video_url}
+                      onChange={(e) => handleChange('video_url', e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=... ou https://vimeo.com/..."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Suporta YouTube, Vimeo ou link direto (.mp4, .webm)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="tourVirtualUrl">URL do Tour Virtual (360°)</Label>
+                    <Input
+                      id="tourVirtualUrl"
+                      type="url"
+                      value={formData.tourVirtualUrl}
+                      onChange={(e) => handleChange('tourVirtualUrl', e.target.value)}
+                      placeholder="https://..."
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
             </form>
           </TabsContent>
 
