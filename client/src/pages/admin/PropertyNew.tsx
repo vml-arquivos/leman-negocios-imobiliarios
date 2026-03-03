@@ -11,16 +11,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Upload, X, Bot } from "lucide-react";
+import { ArrowLeft, Bot } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
-
+import ImageUploader, { ImageFile } from "@/components/ImageUploader";
 
 export default function PropertyNew() {
   const [, setLocation] = useLocation();
   const [uploading, setUploading] = useState(false);
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [uploadStep, setUploadStep] = useState("");
+  const [images, setImages] = useState<ImageFile[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -43,37 +44,72 @@ export default function PropertyNew() {
     featured: false,
   });
 
-  
   const { data: owners } = trpc.owners.list.useQuery();
 
-const createMutation = trpc.properties.create.useMutation({
+  const uploadFileMutation = trpc.propertyImages.uploadFile.useMutation();
+  const reorderMutation = trpc.propertyImages.reorder.useMutation();
+
+  const createMutation = trpc.properties.create.useMutation({
     onSuccess: async (property) => {
       if (images.length > 0) {
         setUploading(true);
         try {
+          // Determinar qual imagem é a principal
+          const primaryIndex = images.findIndex((img) => img.isPrimary);
+          const effectivePrimaryIndex = primaryIndex === -1 ? 0 : primaryIndex;
+
+          // Fazer upload de cada imagem na ordem definida pelo usuário
+          // e coletar os IDs retornados para reordenar depois
+          const uploadedIds: number[] = [];
+
           for (let i = 0; i < images.length; i++) {
             const img = images[i];
-            const formData = new FormData();
-            formData.append('file', img.file);
-            formData.append('propertyId', property.id.toString());
-            formData.append('displayOrder', i.toString());
-            formData.append('isPrimary', (i === 0).toString());
-            
-            const response = await fetch('/api/properties/upload-image', {
-              method: 'POST',
-              body: formData,
+            if (!img.file) continue;
+
+            setUploadStep(`Enviando foto ${i + 1} de ${images.length}...`);
+
+            // Converter File para base64
+            const fileData = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(img.file!);
             });
-            
-            if (!response.ok) {
-              throw new Error('Erro no upload');
+
+            const uploaded = await uploadFileMutation.mutateAsync({
+              propertyId: property.id,
+              filename: img.file.name,
+              contentType: img.file.type || "image/jpeg",
+              fileData,
+              isMain: i === effectivePrimaryIndex,
+            });
+
+            if (uploaded?.id) {
+              uploadedIds.push(uploaded.id);
             }
           }
+
+          // Reordenar as imagens conforme a sequência definida pelo usuário
+          // Os IDs foram coletados na mesma ordem dos uploads (= ordem do usuário)
+          if (uploadedIds.length > 1) {
+            setUploadStep("Salvando ordem das fotos...");
+            await reorderMutation.mutateAsync({
+              propertyId: property.id,
+              orderedIds: uploadedIds,
+            });
+          }
+
           toast.success("Imóvel cadastrado com sucesso!");
           setLocation("/admin/properties");
         } catch (error) {
-          toast.error("Erro ao fazer upload das imagens");
+          console.error("Erro no upload:", error);
+          toast.error(
+            "Imóvel criado, mas houve erro ao enviar algumas imagens. Edite o imóvel para adicionar as fotos."
+          );
+          setLocation("/admin/properties");
         } finally {
           setUploading(false);
+          setUploadStep("");
         }
       } else {
         toast.success("Imóvel cadastrado com sucesso!");
@@ -85,27 +121,9 @@ const createMutation = trpc.properties.create.useMutation({
     },
   });
 
-
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newImages = files.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setImages([...images, ...newImages]);
-  };
-
-  const removeImage = (index: number) => {
-    const newImages = [...images];
-    URL.revokeObjectURL(newImages[index].preview);
-    newImages.splice(index, 1);
-    setImages(newImages);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.description) {
       toast.error("Preencha os campos obrigatórios");
       return;
@@ -116,8 +134,12 @@ const createMutation = trpc.properties.create.useMutation({
       description: formData.description,
       propertyType: formData.propertyType as any,
       transactionType: formData.purpose as any,
-      salePrice: formData.salePrice ? Math.round(parseFloat(formData.salePrice) * 100) : undefined,
-      rentPrice: formData.rentPrice ? Math.round(parseFloat(formData.rentPrice) * 100) : undefined,
+      salePrice: formData.salePrice
+        ? Math.round(parseFloat(formData.salePrice) * 100)
+        : undefined,
+      rentPrice: formData.rentPrice
+        ? Math.round(parseFloat(formData.rentPrice) * 100)
+        : undefined,
       bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
       bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : undefined,
       totalArea: formData.area ? parseFloat(formData.area) : undefined,
@@ -127,11 +149,16 @@ const createMutation = trpc.properties.create.useMutation({
       state: formData.state || undefined,
       zipCode: formData.zipCode || undefined,
       referenceCode: formData.referenceCode || undefined,
-      ownerId: formData.ownerId && formData.ownerId !== "none" ? Number(formData.ownerId) : undefined,
+      ownerId:
+        formData.ownerId && formData.ownerId !== "none"
+          ? Number(formData.ownerId)
+          : undefined,
       status: formData.status as any,
       featured: formData.featured,
     });
   };
+
+  const isSubmitting = createMutation.isPending || uploading;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -154,13 +181,15 @@ const createMutation = trpc.properties.create.useMutation({
               {/* Informações Básicas */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Informações Básicas</h3>
-                
+
                 <div>
                   <Label htmlFor="title">Título *</Label>
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="Ex: Casa Luxuosa no Lago Sul"
                     required
                   />
@@ -175,15 +204,18 @@ const createMutation = trpc.properties.create.useMutation({
                       size="sm"
                       onClick={() => {
                         if (!formData.title || !formData.propertyType) {
-                          toast.error("Preencha o título e tipo do imóvel primeiro");
+                          toast.error(
+                            "Preencha o título e tipo do imóvel primeiro"
+                          );
                           return;
                         }
                         toast.info("🤖 Gerando descrição com IA...");
-                        // Simulação de IA - em produção, chamar API OpenAI
                         setTimeout(() => {
                           const aiDescription = `${formData.title} - Um imóvel excepcional que combina conforto, sofisticação e localização privilegiada. Este ${formData.propertyType} oferece acabamento de primeira qualidade, ambientes amplos e bem iluminados, além de toda a infraestrutura necessária para proporcionar qualidade de vida e bem-estar para você e sua família. Ideal para quem busca excelência em cada detalhe.`;
                           setFormData({ ...formData, description: aiDescription });
-                          toast.success("✅ Descrição gerada! Você pode editar conforme necessário.");
+                          toast.success(
+                            "✅ Descrição gerada! Você pode editar conforme necessário."
+                          );
                         }, 1500);
                       }}
                       className="gap-2"
@@ -195,7 +227,9 @@ const createMutation = trpc.properties.create.useMutation({
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="Descreva o imóvel em detalhes ou use o botão 'Gerar com IA'..."
                     rows={4}
                     required
@@ -207,7 +241,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Label htmlFor="propertyType">Tipo de Imóvel</Label>
                     <Select
                       value={formData.propertyType}
-                      onValueChange={(value) => setFormData({ ...formData, propertyType: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, propertyType: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -227,7 +263,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Label htmlFor="purpose">Finalidade</Label>
                     <Select
                       value={formData.purpose}
-                      onValueChange={(value) => setFormData({ ...formData, purpose: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, purpose: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -249,7 +287,9 @@ const createMutation = trpc.properties.create.useMutation({
                       type="number"
                       step="0.01"
                       value={formData.salePrice}
-                      onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, salePrice: e.target.value })
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -261,7 +301,9 @@ const createMutation = trpc.properties.create.useMutation({
                       type="number"
                       step="0.01"
                       value={formData.rentPrice}
-                      onChange={(e) => setFormData({ ...formData, rentPrice: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, rentPrice: e.target.value })
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -271,7 +313,7 @@ const createMutation = trpc.properties.create.useMutation({
               {/* Características */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Características</h3>
-                
+
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="bedrooms">Quartos</Label>
@@ -279,7 +321,9 @@ const createMutation = trpc.properties.create.useMutation({
                       id="bedrooms"
                       type="number"
                       value={formData.bedrooms}
-                      onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bedrooms: e.target.value })
+                      }
                       placeholder="0"
                     />
                   </div>
@@ -290,7 +334,9 @@ const createMutation = trpc.properties.create.useMutation({
                       id="bathrooms"
                       type="number"
                       value={formData.bathrooms}
-                      onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bathrooms: e.target.value })
+                      }
                       placeholder="0"
                     />
                   </div>
@@ -302,7 +348,9 @@ const createMutation = trpc.properties.create.useMutation({
                       type="number"
                       step="0.01"
                       value={formData.area}
-                      onChange={(e) => setFormData({ ...formData, area: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, area: e.target.value })
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -312,13 +360,15 @@ const createMutation = trpc.properties.create.useMutation({
               {/* Localização */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Localização</h3>
-                
+
                 <div>
                   <Label htmlFor="address">Endereço</Label>
                   <Input
                     id="address"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
                     placeholder="Rua, número"
                   />
                 </div>
@@ -329,7 +379,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Input
                       id="neighborhood"
                       value={formData.neighborhood}
-                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, neighborhood: e.target.value })
+                      }
                       placeholder="Ex: Lago Sul"
                     />
                   </div>
@@ -339,7 +391,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Input
                       id="zipCode"
                       value={formData.zipCode}
-                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, zipCode: e.target.value })
+                      }
                       placeholder="00000-000"
                     />
                   </div>
@@ -351,7 +405,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                      }
                     />
                   </div>
 
@@ -360,7 +416,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Input
                       id="state"
                       value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, state: e.target.value })
+                      }
                       maxLength={2}
                     />
                   </div>
@@ -370,14 +428,16 @@ const createMutation = trpc.properties.create.useMutation({
               {/* Outros */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Outros</h3>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="referenceCode">Código de Referência</Label>
                     <Input
                       id="referenceCode"
                       value={formData.referenceCode}
-                      onChange={(e) => setFormData({ ...formData, referenceCode: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, referenceCode: e.target.value })
+                      }
                       placeholder="Ex: IMV-001"
                     />
                   </div>
@@ -386,7 +446,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={formData.status}
-                      onValueChange={(value) => setFormData({ ...formData, status: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, status: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -406,8 +468,17 @@ const createMutation = trpc.properties.create.useMutation({
                 <div>
                   <Label htmlFor="ownerId">Proprietário (interno)</Label>
                   <Select
-                    value={formData.ownerId && formData.ownerId !== "none" ? String(formData.ownerId) : "none"}
-                    onValueChange={(value) => setFormData({ ...formData, ownerId: value === "none" ? "" : value })}
+                    value={
+                      formData.ownerId && formData.ownerId !== "none"
+                        ? String(formData.ownerId)
+                        : "none"
+                    }
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        ownerId: value === "none" ? "" : value,
+                      })
+                    }
                   >
                     <SelectTrigger id="ownerId">
                       <SelectValue placeholder="Sem proprietário" />
@@ -415,7 +486,9 @@ const createMutation = trpc.properties.create.useMutation({
                     <SelectContent>
                       <SelectItem value="none">Sem proprietário</SelectItem>
                       {(owners ?? []).map((o: any) => (
-                        <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                        <SelectItem key={o.id} value={String(o.id)}>
+                          {o.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -426,7 +499,9 @@ const createMutation = trpc.properties.create.useMutation({
                     type="checkbox"
                     id="featured"
                     checked={formData.featured}
-                    onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, featured: e.target.checked })
+                    }
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor="featured" className="cursor-pointer">
@@ -435,67 +510,37 @@ const createMutation = trpc.properties.create.useMutation({
                 </div>
               </div>
 
-              {/* Upload de Imagens */}
+              {/* Upload de Imagens com reordenação */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Fotos do Imóvel</h3>
-                
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <label htmlFor="image-upload" className="cursor-pointer">
-                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Clique para selecionar imagens ou arraste aqui
-                    </p>
-                  </label>
+                <div>
+                  <h3 className="text-lg font-semibold">Fotos do Imóvel</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Adicione as fotos, arraste para definir a ordem desejada e marque
+                    a imagem principal (capa do card). A sequência definida aqui será
+                    salva na galeria do imóvel.
+                  </p>
                 </div>
 
-                {images.length > 0 && (
-                  <div className="grid grid-cols-3 gap-4">
-                    {images.map((img, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={img.preview}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                        {index === 0 && (
-                          <span className="absolute bottom-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                            Principal
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ImageUploader
+                  images={images}
+                  onChange={setImages}
+                  maxImages={30}
+                />
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || uploading}
-                  className="flex-1"
-                >
-                  {uploading ? "Fazendo upload..." : createMutation.isPending ? "Salvando..." : "Cadastrar Imóvel"}
+                <Button type="submit" disabled={isSubmitting} className="flex-1">
+                  {uploading
+                    ? uploadStep || "Enviando fotos..."
+                    : createMutation.isPending
+                    ? "Salvando..."
+                    : "Cadastrar Imóvel"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setLocation("/admin/properties")}
-                  disabled={createMutation.isPending || uploading}
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </Button>
