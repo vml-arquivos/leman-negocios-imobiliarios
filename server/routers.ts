@@ -2224,7 +2224,23 @@ const financingRouter = router({
       //   body: JSON.stringify({ leadId, simulationId: simulation.insertId, ...input })
       // });
       
-      return { success: true, simulationId: simulation?.id, leadId };
+      // Montar URL do WhatsApp com mensagem pré-formatada
+      const fmtBRL = (cents: number) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+      const whatsappMsg = encodeURIComponent(
+        `Olá! Acabei de simular um financiamento no site da Leman Negócios Imobiliários.\n\n` +
+        `👤 Nome: ${input.name}\n` +
+        `🏦 Banco: ${input.selectedBank}\n` +
+        `🏠 Valor do imóvel: ${fmtBRL(input.propertyValue)}\n` +
+        `💰 Entrada: ${fmtBRL(input.downPayment)}\n` +
+        `📅 Prazo: ${input.termMonths} meses (${Math.round(input.termMonths / 12)} anos)\n` +
+        `📊 Sistema: ${input.amortizationSystem}\n` +
+        `💵 1ª parcela: ${fmtBRL(input.firstInstallment)}\n\n` +
+        `Gostaria de conversar sobre as melhores opções para o meu perfil!`
+      );
+      const whatsappUrl = `https://wa.me/5561998687245?text=${whatsappMsg}`;
+
+      return { success: true, simulationId: simulation?.id, leadId, whatsappUrl };
     }),
 
   // Listar simulações (protegido - admin)
@@ -2266,6 +2282,62 @@ const financingRouter = router({
       }
       
       return simulation;
+    }),
+
+  // Listar simulações com dados do lead (join) — protegido admin
+  listWithLeads: protectedProcedure
+    .input(z.object({
+      contacted: z.boolean().optional(),
+      limit: z.number().optional().default(200),
+    }).optional())
+    .query(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Apenas administradores podem listar simulações');
+      }
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const query = db
+        .select({
+          // financing_simulations
+          id:                  financingSimulations.id,
+          lead_id:             financingSimulations.lead_id,
+          name:                financingSimulations.name,
+          email:               financingSimulations.email,
+          phone:               financingSimulations.phone,
+          property_type:       financingSimulations.property_type,
+          desired_location:    financingSimulations.desired_location,
+          property_value:      financingSimulations.property_value,
+          down_payment:        financingSimulations.down_payment,
+          financed_amount:     financingSimulations.financed_amount,
+          term_months:         financingSimulations.term_months,
+          amortization_system: financingSimulations.amortization_system,
+          selected_bank:       financingSimulations.selected_bank,
+          interest_rate:       financingSimulations.interest_rate,
+          first_installment:   financingSimulations.first_installment,
+          last_installment:    financingSimulations.last_installment,
+          average_installment: financingSimulations.average_installment,
+          total_amount:        financingSimulations.total_amount,
+          total_interest:      financingSimulations.total_interest,
+          status:              financingSimulations.status,
+          contacted:           financingSimulations.contacted,
+          created_at:          financingSimulations.created_at,
+          // leads (join)
+          lead_status:         leads.status,
+          lead_score:          leads.score,
+          lead_origem:         leads.origem,
+        })
+        .from(financingSimulations)
+        .leftJoin(leads, eq(financingSimulations.lead_id, leads.id))
+        .orderBy(desc(financingSimulations.created_at))
+        .limit(input?.limit ?? 200);
+
+      const rows = await query;
+
+      if (input?.contacted !== undefined) {
+        return rows.filter(r => r.contacted === input.contacted);
+      }
+      return rows;
     }),
 
   // Marcar como contatado (protegido - admin)

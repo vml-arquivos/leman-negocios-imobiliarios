@@ -61,10 +61,14 @@ export default function FinancingSimulatorNew() {
 
   const [results, setResults] = useState<SimulationResult[]>([]);
   const [selectedBank, setSelectedBank] = useState<string>("");
+  const [savedWhatsappUrl, setSavedWhatsappUrl] = useState<string | null>(null);
+  const [savedSimulationId, setSavedSimulationId] = useState<number | null>(null);
 
   const createSimulationMutation = trpc.financing.createSimulation.useMutation({
-    onSuccess: () => {
-      toast.success("Simulação salva com sucesso! Em breve entraremos em contato.");
+    onSuccess: (data) => {
+      toast.success("Simulação salva! Fale agora com um especialista.");
+      if (data?.whatsappUrl) setSavedWhatsappUrl(data.whatsappUrl);
+      if (data?.simulationId) setSavedSimulationId(data.simulationId);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao salvar simulação");
@@ -208,6 +212,10 @@ export default function FinancingSimulatorNew() {
     });
 
     setSelectedBank(bankKey);
+    // Rolar para o CTA após salvar
+    setTimeout(() => {
+      document.getElementById('simulation-cta')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
   };
 
   const formatCurrency = (value: number) => {
@@ -441,6 +449,39 @@ export default function FinancingSimulatorNew() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* CTA de conversão após salvar simulação */}
+            {savedWhatsappUrl && (
+              <div id="simulation-cta" className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl p-6 text-white shadow-xl">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="w-6 h-6 text-green-200" />
+                      <span className="text-green-200 text-sm font-medium">Simulação #{savedSimulationId} salva com sucesso!</span>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-1">Próximo passo: fale com um especialista</h3>
+                    <p className="text-green-100 text-sm">
+                      Sua simulação já está com nossa equipe. Clique abaixo para iniciar uma conversa no WhatsApp 
+                      com todos os dados já preenchidos — é rápido e sem compromisso.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 min-w-[220px]">
+                    <a
+                      href={savedWhatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-white text-green-700 font-bold py-3 px-6 rounded-xl hover:bg-green-50 transition-colors shadow-md text-base"
+                    >
+                      <Phone className="w-5 h-5" />
+                      Falar no WhatsApp
+                    </a>
+                    <p className="text-center text-green-200 text-xs">
+                      Resposta em até 30 minutos em horário comercial
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {results.length > 0 && (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
