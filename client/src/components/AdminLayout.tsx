@@ -26,6 +26,7 @@ import {
   Search,
   ChevronDown,
   MessageSquare,
+  Calculator,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -34,8 +35,8 @@ interface AdminLayoutProps {
 }
 
 /**
- * Admin layout with a premium dark style (scoped via `.dark` wrapper).
- * This does NOT change the public website theme.
+ * Admin layout — sidebar premium dark, totalmente harmonizado.
+ * Scoped via `.dark` wrapper para não afetar o site público.
  */
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, logout, loading } = useAuth({ redirectOnUnauthenticated: true });
@@ -44,7 +45,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const navigation = useMemo(
     () => [
-      { name: "Área do Corretor", href: "/admin", icon: LayoutDashboard },
+      { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
       { name: "Imóveis", href: "/admin/properties", icon: Building2 },
       { name: "Leads", href: "/admin/leads", icon: Users },
@@ -53,10 +54,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         name: "Follow-up Automático",
         href: "/admin/followup",
         icon: Bell,
-        badge: true,
+        badge: "NOVO",
       },
       { name: "Financeiro", href: "/admin/financial", icon: DollarSign },
-      { name: "Simulações", href: "/admin/financing-inbox", icon: DollarSign },
+      { name: "Simulações", href: "/admin/financing-inbox", icon: Calculator },
       { name: "WhatsApp Inbox", href: "/admin/whatsapp-inbox", icon: MessageSquare },
       { name: "Blog", href: "/admin/blog", icon: FileText },
       { name: "Personalizar Site", href: "/admin/customization", icon: Paintbrush },
@@ -73,8 +74,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return (
       <div className="dark min-h-screen flex items-center justify-center bg-[#0B0F17]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto" />
-          <p className="mt-4 text-sm text-white/70">Carregando painel...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#f97316] mx-auto" />
+          <p className="mt-4 text-sm text-white/50 tracking-wide">Carregando painel...</p>
         </div>
       </div>
     );
@@ -83,150 +84,175 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (!user) return null;
 
   const userInitial = (user?.name?.trim()?.[0] || "A").toUpperCase();
+  const userName = user?.name || "Admin";
+  const userRole = user?.role || "user";
 
   return (
     <div className="dark min-h-screen bg-[#0B0F17] text-white">
-      {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="outline"
-          size="icon"
+
+      {/* ── Botão menu mobile ──────────────────────────────────────────────── */}
+      <div className="lg:hidden fixed top-3 left-3 z-50">
+        <button
           onClick={() => setSidebarOpen((v) => !v)}
-          className="border-white/10 bg-[#0F1624] hover:bg-white/5 hover:text-white text-white"
+          className="h-9 w-9 flex items-center justify-center rounded-xl bg-[#0F1624] border border-white/10 text-white/70 hover:text-white hover:bg-white/8 transition-colors"
+          aria-label="Abrir menu"
         >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+          {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </button>
       </div>
 
-      {/* Sidebar */}
+      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 bg-[#0F1624] border-r border-white/10 transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0F1624] border-r border-white/[0.07] flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-6 border-b border-white/10">
-            <Link href="/">
-              <div className="flex flex-col cursor-pointer select-none">
-                <span className="text-xl font-semibold tracking-tight">LEMAN</span>
-                <span className="text-[11px] text-orange-300/90 tracking-[0.25em] uppercase">
+        {/* Logo da empresa */}
+        <div className="px-5 py-5 border-b border-white/[0.07]">
+          <Link href="/">
+            <div className="flex items-center gap-3 cursor-pointer select-none group">
+              <img
+                src="/logo-leman.jpg"
+                alt="Leman Negócios Imobiliários"
+                className="h-10 w-auto object-contain rounded-md opacity-90 group-hover:opacity-100 transition-opacity"
+              />
+              <div className="flex flex-col leading-none">
+                <span className="text-[13px] font-semibold text-white tracking-tight">
+                  LEMAN
+                </span>
+                <span className="text-[10px] text-[#f97316]/70 tracking-[0.2em] uppercase mt-0.5">
                   Admin Panel
                 </span>
               </div>
-            </Link>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navigation.map((item) => {
-              const isActive = location === item.href || location.startsWith(item.href + "/");
-              return (
-                <Link key={item.name} href={item.href}>
-                  <button
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
-                      isActive
-                        ? "bg-white/8 text-white ring-1 ring-white/10"
-                        : "text-white/70 hover:bg-white/5 hover:text-white"
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium flex-1 text-left">{item.name}</span>
-                    {item.badge && (
-                      <span className="bg-orange-500 text-black text-[10px] px-2 py-0.5 rounded-full">
-                        NOVO
-                      </span>
-                    )}
-                  </button>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* User footer */}
-          <div className="p-4 border-t border-white/10">
-            <div className="flex items-center gap-3 mb-3 px-2">
-              <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center ring-1 ring-white/10">
-                <span className="text-sm font-semibold text-white">{userInitial}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-white">{user?.name || "Admin"}</p>
-                <p className="text-xs text-white/60 truncate">{user?.email}</p>
-              </div>
             </div>
+          </Link>
+        </div>
 
-            <Button
-              variant="outline"
-              className="w-full justify-start border-white/10 bg-transparent hover:bg-white/5 hover:text-white text-white"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+        {/* Navegação */}
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+          {navigation.map((item) => {
+            const isActive =
+              location === item.href ||
+              (item.href !== "/admin" && location.startsWith(item.href + "/"));
+            return (
+              <Link key={item.name} href={item.href}>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 relative group ${
+                    isActive
+                      ? "bg-white/[0.08] text-white"
+                      : "text-white/55 hover:text-white/90 hover:bg-white/[0.05]"
+                  }`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  {/* Indicador ativo */}
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#f97316] rounded-r-full" />
+                  )}
+                  <item.icon
+                    className={`h-4 w-4 shrink-0 transition-colors ${
+                      isActive ? "text-[#f97316]" : "text-white/40 group-hover:text-white/70"
+                    }`}
+                  />
+                  <span className="flex-1 text-left truncate">{item.name}</span>
+                  {item.badge && (
+                    <span className="bg-[#f97316] text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Rodapé do usuário */}
+        <div className="px-3 pb-4 pt-3 border-t border-white/[0.07]">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors cursor-default">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#f97316]/30 to-[#f97316]/10 flex items-center justify-center ring-1 ring-white/10 shrink-0">
+              <span className="text-xs font-bold text-white">{userInitial}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-white truncate leading-none">{userName}</p>
+              <p className="text-[11px] text-white/40 truncate mt-0.5 capitalize">{userRole}</p>
+            </div>
           </div>
+
+          <button
+            onClick={handleLogout}
+            className="mt-2 w-full flex items-center gap-2 px-3 py-2 text-[12px] text-white/45 hover:text-white/80 hover:bg-white/[0.05] rounded-lg transition-colors"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Sair da conta</span>
+          </button>
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* Overlay mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/70 z-30 lg:hidden backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Main content */}
-      <div className="lg:pl-72">
+      {/* ── Conteúdo principal ─────────────────────────────────────────────── */}
+      <div className="lg:pl-64">
+
         {/* Topbar */}
-        <header className="sticky top-0 z-20 backdrop-blur bg-[#0B0F17]/70 border-b border-white/10">
-          <div className="px-4 lg:px-8 py-4 flex items-center gap-3">
-            <div className="hidden lg:flex items-center gap-2 text-sm text-white/70">
-              <span className="font-medium text-white">Dashboard</span>
-              <span className="text-white/30">•</span>
-              <span className="text-white/60">Produção</span>
+        <header className="sticky top-0 z-20 bg-[#0B0F17]/90 backdrop-blur-md border-b border-white/[0.07]">
+          <div className="px-5 lg:px-8 h-14 flex items-center gap-4">
+
+            {/* Breadcrumb */}
+            <div className="hidden lg:flex items-center gap-2 text-[13px]">
+              <span className="font-semibold text-white/90">Dashboard</span>
+              <span className="text-white/20">·</span>
+              <span className="text-white/45">Produção</span>
             </div>
 
             <div className="flex-1" />
 
-            {/* Search */}
-            <div className="hidden md:flex items-center gap-2 w-[360px]">
+            {/* Campo de busca */}
+            <div className="hidden md:flex items-center w-[300px] lg:w-[340px]">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
                 <Input
                   placeholder="Buscar leads, imóveis, clientes…"
-                  className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-orange-500/30"
+                  className="pl-9 h-9 text-[13px] bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus-visible:ring-[#f97316]/25 focus-visible:border-white/20 rounded-xl"
                 />
               </div>
             </div>
 
-            {/* User menu */}
+            {/* Menu do usuário */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/5 ring-1 ring-white/10">
-                  <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
-                    <span className="text-xs font-semibold">{userInitial}</span>
+                <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-white/[0.06] ring-1 ring-white/[0.08] transition-colors">
+                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#f97316]/30 to-[#f97316]/10 flex items-center justify-center ring-1 ring-white/10">
+                    <span className="text-[11px] font-bold text-white">{userInitial}</span>
                   </div>
-                  <div className="hidden sm:block text-left">
-                    <div className="text-sm font-medium leading-none">{user?.name || "Admin"}</div>
-                    <div className="text-xs text-white/50 leading-none mt-1">
-                      {user?.role || "user"}
-                    </div>
+                  <div className="hidden sm:block text-left leading-none">
+                    <div className="text-[13px] font-medium text-white/90">{userName}</div>
+                    <div className="text-[11px] text-white/40 mt-0.5 capitalize">{userRole}</div>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-white/50" />
+                  <ChevronDown className="h-3.5 w-3.5 text-white/35" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-[#0F1624] border-white/10 text-white">
+              <DropdownMenuContent
+                align="end"
+                className="w-52 bg-[#0F1624] border-white/10 text-white shadow-xl"
+              >
                 <DropdownMenuItem asChild>
                   <Link href="/admin/settings">
-                    <div className="flex items-center gap-2 cursor-pointer">
-                      <Settings className="h-4 w-4" />
+                    <div className="flex items-center gap-2 cursor-pointer text-[13px]">
+                      <Settings className="h-4 w-4 text-white/50" />
                       Configurações
                     </div>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                <DropdownMenuSeparator className="bg-white/[0.08]" />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer text-[13px] text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                >
                   <div className="flex items-center gap-2">
                     <LogOut className="h-4 w-4" />
                     Sair
@@ -237,7 +263,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </header>
 
-        <main className="px-4 lg:px-8 py-6 lg:py-8">{children}</main>
+        {/* Conteúdo da página */}
+        <main className="px-5 lg:px-8 py-6 lg:py-8">{children}</main>
       </div>
     </div>
   );

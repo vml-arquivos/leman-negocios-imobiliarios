@@ -440,19 +440,19 @@ export default function PropertyEdit() {
 
       {/* Tabs */}
       <Tabs defaultValue="basico" className="w-full">
-        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="basico">Básico</TabsTrigger>
-          <TabsTrigger value="localizacao">Localização</TabsTrigger>
-          <TabsTrigger value="valores">Valores</TabsTrigger>
-          <TabsTrigger value="areas">Áreas e Ambientes</TabsTrigger>
-          <TabsTrigger value="caracteristicas">Características</TabsTrigger>
-          <TabsTrigger value="condominio">Condomínio e Lazer</TabsTrigger>
-          <TabsTrigger value="seguranca">Segurança e Infra</TabsTrigger>
-          <TabsTrigger value="luxo">Luxo</TabsTrigger>
-          <TabsTrigger value="midia">Mídia</TabsTrigger>
-          <TabsTrigger value="destaques">Destaques</TabsTrigger>
-          <TabsTrigger value="score">Qualidade</TabsTrigger>
-          <TabsTrigger value="fotos">Fotos</TabsTrigger>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1 bg-white/[0.04] border border-white/[0.08] rounded-xl">
+          <TabsTrigger value="basico" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Básico</TabsTrigger>
+          <TabsTrigger value="localizacao" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Localização</TabsTrigger>
+          <TabsTrigger value="valores" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Valores</TabsTrigger>
+          <TabsTrigger value="areas" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Áreas e Ambientes</TabsTrigger>
+          <TabsTrigger value="caracteristicas" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Características</TabsTrigger>
+          <TabsTrigger value="condominio" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Condomínio e Lazer</TabsTrigger>
+          <TabsTrigger value="seguranca" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Segurança e Infra</TabsTrigger>
+          <TabsTrigger value="luxo" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Luxo</TabsTrigger>
+          <TabsTrigger value="midia" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Mídia</TabsTrigger>
+          <TabsTrigger value="destaques" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Destaques</TabsTrigger>
+          <TabsTrigger value="score" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Qualidade</TabsTrigger>
+          <TabsTrigger value="fotos" className="text-[11px] font-medium px-3 py-1.5 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none">Fotos</TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Básico ── */}
