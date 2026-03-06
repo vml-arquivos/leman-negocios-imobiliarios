@@ -158,7 +158,7 @@ async function startServer() {
   }
 
   // Use PORT from environment variable, bind to 0.0.0.0 for external access
-  const port = Number(process.env.PORT) || 5000;
+  const port = Number(process.env.PORT) || 8080;
 
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${port}/`);

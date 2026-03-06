@@ -7,9 +7,12 @@
  * 3. Calcular score de qualificação do lead
  * 4. Identificar intenção: compra, locação, financiamento, informação
  * 5. Salvar histórico de conversa e atualizar lead no banco
+ *
+ * Provedor de IA: Google Gemini (GEMINI_API_KEY)
+ * Instância lazy — o servidor NÃO crasha no boot se a key estiver ausente.
  */
 
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getDb } from "./db";
 import {
   leads,
@@ -18,13 +21,31 @@ import {
   leadInsights,
   clientInterests,
 } from "../drizzle/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
-// ─── Cliente OpenAI (usa OPENAI_API_KEY do ambiente) ─────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
-});
+// ─── Cliente Gemini (lazy — instanciado apenas quando chamado) ────────────────
+function getGeminiModel(modelName = "gemini-1.5-flash") {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY não configurada");
+  const genAI = new GoogleGenerativeAI(key);
+  return genAI.getGenerativeModel({ model: modelName });
+}
+
+// ─── Helper: chama Gemini e extrai JSON da resposta ──────────────────────────
+async function callGeminiJson(systemPrompt: string, userPrompt: string): Promise<string> {
+  const model = getGeminiModel();
+  const result = await model.generateContent({
+    contents: [
+      { role: "user", parts: [{ text: `${systemPrompt}\n\n---\n\n${userPrompt}` }] },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 1024,
+      responseMimeType: "application/json",
+    },
+  });
+  return result.response.text();
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 export interface ExtractedClientData {
@@ -128,29 +149,15 @@ export async function processWhatsAppMessage(
 
   const chronological = history.reverse();
 
-  // 3. Montar contexto para a IA
-  const messages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    {
-      role: "user",
-      content: `Analise o histórico de conversa abaixo e extraia os dados estruturados do cliente.\n\nTelefone: ${normalizedPhone}\nNome informado pelo sistema: ${senderName ?? "desconhecido"}\n\nHISTÓRICO:\n${chronological
-        .map((m: any) => `[${m.role === "user" ? "CLIENTE" : "ASSISTENTE"}]: ${m.message}`)
-        .join("\n")}`,
-    },
-  ];
+  // 3. Montar prompt para o Gemini
+  const userPrompt = `Analise o histórico de conversa abaixo e extraia os dados estruturados do cliente.\n\nTelefone: ${normalizedPhone}\nNome informado pelo sistema: ${senderName ?? "desconhecido"}\n\nHISTÓRICO:\n${chronological
+    .map((m: any) => `[${m.role === "user" ? "CLIENTE" : "ASSISTENTE"}]: ${m.message}`)
+    .join("\n")}`;
 
-  // 4. Chamar a IA para extração de dados
+  // 4. Chamar o Gemini para extração de dados
   let extracted: ExtractedClientData = {};
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages,
-      temperature: 0.1,
-      max_tokens: 800,
-      response_format: { type: "json_object" },
-    });
-
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = await callGeminiJson(SYSTEM_PROMPT, userPrompt);
     extracted = JSON.parse(raw);
   } catch (err) {
     console.error("[AI Agent] Extraction error:", err);
@@ -304,34 +311,22 @@ export async function generateConversationAnalysis(phone: string): Promise<{
     };
   }
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content: `Você é um analista imobiliário. Analise a conversa e retorne JSON com:
+  const analysisSystemPrompt = `Você é um analista imobiliário. Analise a conversa e retorne JSON com:
 {
   "summary": "resumo executivo em 2-3 frases",
   "score": número 0-100 de qualificação,
   "intent": "compra|locacao|financiamento|informacao|outro",
   "suggestedAction": "ação concreta para o corretor",
   "financialProfile": "perfil financeiro resumido (ex: 'Entrada de R$100k disponível, busca financiamento SBPE, orçamento até R$500k')"
-}`,
-        },
-        {
-          role: "user",
-          content: `Conversa WhatsApp (${normalizedPhone}):\n${history
-            .map((m: any) => `[${m.role === "user" ? "CLIENTE" : "IA"}]: ${m.message}`)
-            .join("\n")}`,
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 500,
-      response_format: { type: "json_object" },
-    });
+}`;
 
-    return JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+  const conversationText = `Conversa WhatsApp (${normalizedPhone}):\n${history
+    .map((m: any) => `[${m.role === "user" ? "CLIENTE" : "IA"}]: ${m.message}`)
+    .join("\n")}`;
+
+  try {
+    const raw = await callGeminiJson(analysisSystemPrompt, conversationText);
+    return JSON.parse(raw);
   } catch (err) {
     console.error("[AI Agent] Analysis error:", err);
     return {
