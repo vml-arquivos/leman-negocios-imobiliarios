@@ -124,7 +124,7 @@ function FeatureCheckboxGroup({
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function PropertyEdit() {
   const [, setLocation] = useLocation();
-  const params = useParams();
+  const params = useParams<"/:id">();
   const propertyId = params.id ? parseInt(params.id) : null;
   const utils = trpc.useUtils();
 
@@ -263,7 +263,7 @@ export default function PropertyEdit() {
         parkingSpaces: parseInt(p.parking_spaces ?? p.parkingSpaces ?? 0) || 0,
         totalArea: parseFloat(p.total_area ?? p.totalArea ?? 0) || 0,
         builtArea: parseFloat(p.built_area ?? p.builtArea ?? 0) || 0,
-        areaUtil: parseFloat(featV2.areas?.area_util_m2 ?? 0) || 0,
+        areaUtil: parseFloat(String(featV2.areas?.area_util_m2 ?? 0)) || 0,
         areaPrivativa: parseFloat(featV2.areas?.area_privativa_m2 as any ?? 0) || 0,
         areaTerreno: parseFloat(featV2.areas?.area_terreno_m2 as any ?? 0) || 0,
         peDireito: parseFloat(featV2.areas?.pe_direito_m as any ?? 0) || 0,

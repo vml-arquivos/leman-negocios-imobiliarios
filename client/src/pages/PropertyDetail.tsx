@@ -142,7 +142,7 @@ function FeaturesSection({ features }: { features: FeaturesV2 }) {
 
 // ─── main ────────────────────────────────────────────────────────────────────
 export default function PropertyDetail() {
-  const params = useParams();
+  const params = useParams<"/:id">();
   const propertyId = params.id ? parseInt(params.id) : 0;
 
   const { data: property, isLoading } = trpc.properties.getById.useQuery(
