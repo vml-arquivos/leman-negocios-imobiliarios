@@ -2718,19 +2718,136 @@ const clientsRouter = router({
 // ============================================
 
 // ============================================
-// WHATSAPP INBOX ROUTER
+// WHATSAPP INBOX ROUTER (v2 — com IA)
 // ============================================
 const whatsappInboxRouter = router({
+  // Lista conversas com dados enriquecidos (lead + insights de IA)
   listConversations: protectedProcedure
     .input(z.object({ limit: z.number().optional() }).optional())
     .query(async ({ input }) => {
       return await db.listWhatsAppConversations(input?.limit ?? 50);
     }),
 
+  // Lista conversas enriquecidas com dados de IA (ai_context_status + lead_insights)
+  listConversationsEnriched: protectedProcedure
+    .input(z.object({ limit: z.number().optional() }).optional())
+    .query(async ({ input, ctx }) => {
+      const dbi = await getDb();
+      if (!dbi) return [];
+      const { aiContextStatus, leadInsights, clientInterests } = await import('../drizzle/schema');
+      // Buscar conversas agrupadas por telefone com última mensagem e dados do lead
+      const rows = await dbi.execute(
+        sql`SELECT
+              acs.phone,
+              MAX(acs.created_at) AS last_at,
+              COUNT(*) AS message_count,
+              (SELECT message FROM ai_context_status WHERE phone = acs.phone AND role = 'user' ORDER BY created_at DESC LIMIT 1) AS last_message,
+              l.id AS lead_id,
+              l.name AS lead_name,
+              l.score AS lead_score,
+              l.status AS lead_status,
+              l.stage AS lead_stage,
+              l.email AS lead_email,
+              l.orcamento_min,
+              l.orcamento_max,
+              l.metadata AS lead_metadata,
+              li.sentiment_score,
+              li.ai_summary
+            FROM ai_context_status acs
+            LEFT JOIN leads l ON l.telefone = acs.phone
+            LEFT JOIN lead_insights li ON li.lead_id = l.id
+            WHERE acs.role = 'user'
+            GROUP BY acs.phone, l.id, l.name, l.score, l.status, l.stage, l.email, l.orcamento_min, l.orcamento_max, l.metadata, li.sentiment_score, li.ai_summary
+            ORDER BY last_at DESC
+            LIMIT ${input?.limit ?? 100}`
+      );
+      return (rows as any).rows ?? (rows as any[]);
+    }),
+
+  // Thread de mensagens (message_buffer)
   getThread: protectedProcedure
     .input(z.object({ phone: z.string(), limit: z.number().optional() }))
     .query(async ({ input }) => {
       return await db.getWhatsAppThread(input.phone, input.limit ?? 100);
+    }),
+
+  // Thread de mensagens do ai_context_status (histórico completo com IA)
+  getAiThread: protectedProcedure
+    .input(z.object({ phone: z.string(), limit: z.number().optional() }))
+    .query(async ({ input }) => {
+      const dbi = await getDb();
+      if (!dbi) return [];
+      const { aiContextStatus } = await import('../drizzle/schema');
+      const normalizedPhone = input.phone.replace(/\D/g, '');
+      return await dbi
+        .select()
+        .from(aiContextStatus)
+        .where(eq(aiContextStatus.phone, normalizedPhone))
+        .orderBy(aiContextStatus.created_at)
+        .limit(input.limit ?? 200);
+    }),
+
+  // Perfil completo do lead vinculado ao telefone
+  getLeadProfile: protectedProcedure
+    .input(z.object({ phone: z.string() }))
+    .query(async ({ input }) => {
+      const dbi = await getDb();
+      if (!dbi) return null;
+      const { leadInsights, clientInterests, interactions: interactionsTable } = await import('../drizzle/schema');
+      const normalizedPhone = input.phone.replace(/\D/g, '');
+      const leadRows = await dbi.select().from(leads).where(eq(leads.telefone, normalizedPhone)).limit(1);
+      if (leadRows.length === 0) return null;
+      const lead = leadRows[0];
+      const [insights, interests, recentInteractions] = await Promise.all([
+        dbi.select().from(leadInsights).where(eq(leadInsights.lead_id, lead.id)).limit(1),
+        dbi.select().from(clientInterests).where(eq(clientInterests.client_id, lead.id)).orderBy(desc(clientInterests.created_at)).limit(5),
+        dbi.select().from(interactionsTable).where(eq(interactionsTable.lead_id, lead.id)).orderBy(desc(interactionsTable.created_at)).limit(10),
+      ]);
+      return {
+        lead,
+        insights: insights[0] ?? null,
+        interests,
+        recentInteractions,
+      };
+    }),
+
+  // Analisar conversa com IA e gerar resumo de custo-beneficio
+  analyzeConversation: protectedProcedure
+    .input(z.object({ phone: z.string() }))
+    .mutation(async ({ input }) => {
+      const { generateConversationAnalysis } = await import('./ai-agent');
+      const analysis = await generateConversationAnalysis(input.phone);
+      return { phone: input.phone, ...analysis };
+    }),
+
+  // Reprocessar mensagem com IA (forcar nova extração de dados)
+  reprocessWithAI: protectedProcedure
+    .input(z.object({ phone: z.string(), message: z.string() }))
+    .mutation(async ({ input }) => {
+      const { processWhatsAppMessage } = await import('./ai-agent');
+      const result = await processWhatsAppMessage(input.phone, input.message);
+      return result;
+    }),
+
+  // Estatísticas gerais do WhatsApp Inbox
+  getStats: protectedProcedure
+    .query(async () => {
+      const dbi = await getDb();
+      if (!dbi) return {};
+      const { aiContextStatus, leadInsights } = await import('../drizzle/schema');
+      const [totalConvs, totalMsgs, qualifiedLeads] = await Promise.all([
+        dbi.execute(sql`SELECT COUNT(DISTINCT phone) AS total FROM ai_context_status WHERE role = 'user'`),
+        dbi.execute(sql`SELECT COUNT(*) AS total FROM ai_context_status WHERE role = 'user'`),
+        dbi.execute(sql`SELECT COUNT(*) AS total FROM leads WHERE origem = 'whatsapp' AND (status = 'qualificado' OR score >= 60)`),
+      ]);
+      const tc = (totalConvs as any).rows?.[0] ?? (totalConvs as any[])[0];
+      const tm = (totalMsgs as any).rows?.[0] ?? (totalMsgs as any[])[0];
+      const ql = (qualifiedLeads as any).rows?.[0] ?? (qualifiedLeads as any[])[0];
+      return {
+        totalConversations: Number(tc?.total ?? 0),
+        totalMessages: Number(tm?.total ?? 0),
+        qualifiedLeads: Number(ql?.total ?? 0),
+      };
     }),
 
   markProcessed: protectedProcedure
