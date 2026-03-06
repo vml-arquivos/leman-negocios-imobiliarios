@@ -302,6 +302,8 @@ const propertiesRouter = router({
       features: z.string().optional(),
       images: z.string().optional(),
       mainImage: z.string().optional(),
+      video_url: z.string().optional(),
+      tourVirtualUrl: z.string().optional(),
       status: z.enum(["disponivel", "reservado", "vendido", "alugado", "inativo"]).optional(),
       featured: z.boolean().optional(),
       published: z.boolean().optional(),
