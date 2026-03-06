@@ -1,3 +1,9 @@
+/**
+ * PropertyCard.tsx — Card de Imóvel — Elite Property Profile v2
+ *
+ * Exibe badge de score (PREMIUM/BOM), destaques do imóvel (até 2),
+ * ícones de vídeo/tour quando disponíveis. Retrocompatível com dados antigos.
+ */
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +19,15 @@ import {
   Car,
   Sparkles,
   MessageCircle,
+  Trophy,
+  Star,
+  Video,
+  Compass,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCompare } from "@/contexts/CompareContext";
 import { toast } from "sonner";
+import { normalizeFeatures, computeListingQuality } from "@/constants/propertyFeatures";
 
 export interface Property {
   id: number;
@@ -41,13 +52,13 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {
+  const p = property as any;
+
   const displayPrice =
-    (property as any)?.sale_price ??
-    (property as any)?.salePrice ??
-    (property as any)?.rent_price ??
-    (property as any)?.rentPrice ??
-    (property as any)?.price ?? 0;
-  const isRent = !!(((property as any)?.rent_price ?? (property as any)?.rentPrice) && !((property as any)?.sale_price ?? (property as any)?.salePrice));
+    p?.sale_price ?? p?.salePrice ?? p?.rent_price ?? p?.rentPrice ?? p?.price ?? 0;
+  const isRent = !!(
+    (p?.rent_price ?? p?.rentPrice) && !(p?.sale_price ?? p?.salePrice)
+  );
   const [isFavorite, setIsFavorite] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { addProperty, removeProperty, isSelected, canAddMore } = useCompare();
@@ -67,14 +78,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(price);
-  };
 
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -85,7 +95,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     window.open(`https://wa.me/5561998687245?text=${message}`, "_blank");
   };
 
-  const p = property as any;
   const tx = p.transaction_type ?? property.transactionType;
   const isVenda = tx === "venda";
   const coverImage =
@@ -94,6 +103,42 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     (property.images && property.images.length > 0 ? property.images[0] : null) ??
     "/logo-leman.jpg";
   const imageCount = Array.isArray(p.images) ? p.images.length : property.images?.length ?? 0;
+
+  // ── Features V2 ──
+  const featuresV2 = useMemo(() => {
+    let raw = p.features;
+    if (typeof raw === "string") {
+      try { raw = JSON.parse(raw); } catch { raw = null; }
+    }
+    return normalizeFeatures(raw);
+  }, [p.features]);
+
+  // ── Destaques (até 2) ──
+  const destaques: string[] = useMemo(
+    () => (Array.isArray(featuresV2.destaques) ? featuresV2.destaques.slice(0, 2) : []),
+    [featuresV2.destaques]
+  );
+
+  // ── Score de qualidade ──
+  const quality = useMemo(() => {
+    return computeListingQuality({
+      title: p.title,
+      description: p.description,
+      images: Array.isArray(p.images) ? p.images : [],
+      video_url: p.video_url || featuresV2.midia?.youtube_url,
+      tour_virtual_url: p.tour_virtual_url ?? p.tourVirtualUrl ?? featuresV2.midia?.tour_3d_url,
+      total_area: p.total_area ?? p.totalArea,
+      built_area: p.built_area ?? p.builtArea,
+      address: p.address,
+      neighborhood: p.neighborhood,
+      city: p.city,
+      state: p.state,
+      features: featuresV2,
+    });
+  }, [p, featuresV2]);
+
+  const hasVideo = !!(p.video_url || featuresV2.midia?.youtube_url || featuresV2.midia?.video_direto_url);
+  const hasTour  = !!(p.tour_virtual_url ?? p.tourVirtualUrl ?? featuresV2.midia?.tour_3d_url);
 
   return (
     <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white rounded-xl">
@@ -108,13 +153,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             onLoad={() => setImageError(false)}
             loading="lazy"
           />
-          
+
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a1f3c]/80 via-transparent to-transparent" />
 
           {/* Compare Checkbox */}
           <div className="absolute bottom-3 left-3 z-10">
-            <label 
+            <label
               className="flex items-center gap-2 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md cursor-pointer hover:bg-white transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
@@ -129,11 +174,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           </div>
 
           {/* Badges */}
-          <div className="absolute top-3 left-3 flex gap-2">
-            <Badge 
+          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+            <Badge
               className={`font-semibold ${
                 isVenda
-                  ? "bg-[#c9a962] text-[#1a1f3c] hover:bg-[#b8944f]" 
+                  ? "bg-[#c9a962] text-[#1a1f3c] hover:bg-[#b8944f]"
                   : "bg-[#1a1f3c] text-[#c9a962] hover:bg-[#151933]"
               }`}
             >
@@ -145,10 +190,31 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                 Destaque
               </Badge>
             )}
+            {quality.status === "PREMIUM" && (
+              <Badge className="bg-amber-500/90 text-white gap-1">
+                <Trophy className="w-3 h-3" /> Premium
+              </Badge>
+            )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Media indicators */}
+          {(hasVideo || hasTour) && (
+            <div className="absolute top-3 right-3 flex gap-1">
+              {hasVideo && (
+                <span title="Vídeo disponível" className="bg-black/60 text-white p-1.5 rounded-full">
+                  <Video className="h-3.5 w-3.5" />
+                </span>
+              )}
+              {hasTour && (
+                <span title="Tour virtual disponível" className="bg-black/60 text-white p-1.5 rounded-full">
+                  <Compass className="h-3.5 w-3.5" />
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons (hover) */}
+          <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Button
               size="icon"
               variant="secondary"
@@ -177,17 +243,10 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Image Counter */}
           {imageCount > 1 && (
-            <div className="absolute bottom-3 right-3 bg-[#1a1f3c]/90 text-white px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-sm">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-[#1a1f3c]/90 text-white px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-sm">
               +{imageCount - 1} fotos
             </div>
           )}
-
-          {/* Property Type Badge */}
-          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
-            <Badge className="bg-[#1a1f3c]/90 text-white capitalize backdrop-blur-sm">
-              {property.propertyType}
-            </Badge>
-          </div>
         </div>
       </Link>
 
@@ -197,9 +256,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         <div className="mb-3">
           <p className="text-2xl font-bold text-[#1a1f3c]">
             {formatPrice(displayPrice)}
-            {isRent && (
-              <span className="text-sm text-gray-500 font-normal">/mês</span>
-            )}
+            {isRent && <span className="text-sm text-gray-500 font-normal">/mês</span>}
           </p>
           {!isRent && displayPrice > 100000000 && (
             <p className="text-xs text-gray-500 mt-1">
@@ -216,12 +273,24 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         </Link>
 
         {/* Location */}
-        <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-4">
+        <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-3">
           <MapPin className="w-4 h-4 flex-shrink-0 text-[#c9a962]" />
           <span className="truncate">
             {property.neighborhood}, {property.city}
           </span>
         </div>
+
+        {/* Destaques (até 2) */}
+        {destaques.length > 0 && (
+          <div className="mb-3 space-y-1">
+            {destaques.map((d, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-xs text-amber-700">
+                <Star className="h-3 w-3 flex-shrink-0 text-amber-500" />
+                <span className="truncate">{d}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Features */}
         <div className="flex items-center gap-4 text-sm text-gray-600 border-t border-gray-100 pt-4">
@@ -254,14 +323,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         {/* CTA Buttons */}
         <div className="flex gap-2 mt-4">
           <Link href={`/imoveis/${property.id}`} className="flex-1">
-            <Button 
-              className="w-full bg-[#1a1f3c] hover:bg-[#151933] text-white"
-            >
+            <Button className="w-full bg-[#1a1f3c] hover:bg-[#151933] text-white">
               Ver Detalhes
             </Button>
           </Link>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="icon"
             className="border-[#25D366] text-[#25D366] hover:bg-[#25D366] hover:text-white"
             onClick={handleWhatsApp}
