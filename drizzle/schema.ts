@@ -77,6 +77,48 @@ export const properties = pgTable("properties", {
   parking_spaces:   integer("parking_spaces"),
   total_area:       numeric("total_area"),
   built_area:       numeric("built_area"),
+  useful_area:      numeric("useful_area"),           // área útil/privativa
+  land_area:        numeric("land_area"),             // área do terreno
+  service_area:     numeric("service_area"),          // área de serviço
+
+  // Detalhes do imóvel
+  property_subtype:   varchar("property_subtype"),   // residencial|comercial|rural
+  property_condition: varchar("property_condition"), // novo|usado|na_planta|em_construcao|em_reforma
+  floor_number:       integer("floor_number"),        // andar do imóvel
+  total_floors:       integer("total_floors"),        // total de andares do edifício
+  units_per_floor:    integer("units_per_floor"),     // unidades por andar
+  unit_number:        varchar("unit_number"),         // número da unidade/apartamento
+  block:              varchar("block"),               // bloco/torre
+  year_built:         integer("year_built"),          // ano de construção
+  sun_position:       varchar("sun_position"),        // norte|sul|leste|oeste|nordeste|noroeste|sudeste|sudoeste
+  furnished_status:   varchar("furnished_status"),   // mobiliado|semimobiliado|sem_mobilia
+  lavabos:            integer("lavabos"),             // lavabos (banheiros sem chuveiro)
+
+  // Financeiro
+  fire_insurance:      numeric("fire_insurance"),    // seguro incêndio R$/mês
+  accepts_financing:   boolean("accepts_financing").default(true),
+  accepts_fgts:        boolean("accepts_fgts").default(false),
+  accepts_exchange:    boolean("accepts_exchange").default(false),
+
+  // Condomínio
+  condo_name:          varchar("condo_name"),        // nome do condomínio/empreendimento
+  condo_units:         integer("condo_units"),       // total de unidades no condomínio
+  condo_administrator: varchar("condo_administrator"), // administradora
+  builder:             varchar("builder"),           // construtora/incorporadora
+
+  // Amenidades (checkboxes) — separadas por categoria
+  amenities_unit:  jsonb("amenities_unit").default([]),  // características da unidade
+  amenities_condo: jsonb("amenities_condo").default([]), // características do condomínio
+
+  // Localização extra
+  nearby_subway:       boolean("nearby_subway").default(false),
+  subway_distance_m:   integer("subway_distance_m"),
+
+  // SEO
+  seo_score:        integer("seo_score").default(0),  // 0-100 calculado automaticamente
+  seo_keywords:     text("seo_keywords"),             // palavras-chave separadas por vírgula
+  canonical_url:    varchar("canonical_url"),
+
   features:         jsonb("features").default([]),
   images:           jsonb("images").default([]),
   main_image:       varchar("main_image"),

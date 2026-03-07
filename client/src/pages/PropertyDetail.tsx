@@ -10,6 +10,9 @@ import {
   Phone, Mail, MessageSquare, Share2,
   ChevronLeft, ChevronRight, X,
   Building2, DollarSign, Layers, Hash, CheckCircle2,
+  Star, Sun, Calendar, Compass, Users, Ruler, Video, Globe,
+  Sofa, Zap, Droplets, Trees, Shield, Waves, ChefHat, Baby,
+  Dumbbell, Bike, ParkingCircle, Wifi, Train,
 } from "lucide-react";
 import { Link, useParams } from "wouter";
 import Header from "@/components/Header";
@@ -322,20 +325,157 @@ export default function PropertyDetail() {
                     <h2 className="font-heading text-xl font-bold mb-5">Características</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
                       {p.bedrooms     ? <FeatureItem icon={<Bed className="h-5 w-5" />}          value={String(p.bedrooms)}         label="Quartos" /> : null}
+                      {p.suites       ? <FeatureItem icon={<Star className="h-5 w-5" />}         value={String(p.suites)}           label="Suítes" /> : null}
                       {p.bathrooms    ? <FeatureItem icon={<Bath className="h-5 w-5" />}         value={String(p.bathrooms)}        label="Banheiros" /> : null}
-                      {p.suites       ? <FeatureItem icon={<Bed className="h-5 w-5" />}          value={String(p.suites)}           label="Suítes" /> : null}
+                      {p.lavabos      ? <FeatureItem icon={<Droplets className="h-5 w-5" />}     value={String(p.lavabos)}          label="Lavabos" /> : null}
                       {parkingSpaces  ? <FeatureItem icon={<Car className="h-5 w-5" />}          value={String(parkingSpaces)}      label="Vagas" /> : null}
                       {totalArea      ? <FeatureItem icon={<Maximize className="h-5 w-5" />}     value={fmtArea(totalArea)}         label="Área Total" /> : null}
+                      {p.useful_area  ? <FeatureItem icon={<Ruler className="h-5 w-5" />}        value={fmtArea(p.useful_area)}     label="Área Útil" /> : null}
                       {builtArea      ? <FeatureItem icon={<Layers className="h-5 w-5" />}       value={fmtArea(builtArea)}         label="Área Construída" /> : null}
+                      {p.land_area    ? <FeatureItem icon={<Trees className="h-5 w-5" />}        value={fmtArea(p.land_area)}       label="Área do Terreno" /> : null}
+                      {p.floor_number ? <FeatureItem icon={<Building2 className="h-5 w-5" />}   value={`${p.floor_number}º andar`} label="Andar" /> : null}
+                      {p.total_floors ? <FeatureItem icon={<Building2 className="h-5 w-5" />}   value={String(p.total_floors)}     label="Total de Andares" /> : null}
+                      {p.year_built   ? <FeatureItem icon={<Calendar className="h-5 w-5" />}    value={String(p.year_built)}       label="Ano de Construção" /> : null}
+                      {p.sun_position ? <FeatureItem icon={<Compass className="h-5 w-5" />}     value={p.sun_position}             label="Posição Solar" /> : null}
                       {salePrice      ? <FeatureItem icon={<DollarSign className="h-5 w-5" />}   value={fmtCurrency(salePrice)}     label="Preço de Venda" wide /> : null}
                       {rentPrice      ? <FeatureItem icon={<DollarSign className="h-5 w-5" />}   value={`${fmtCurrency(rentPrice)}/mês`} label="Aluguel" wide /> : null}
-                      {condoFee       ? <FeatureItem icon={<Building2 className="h-5 w-5" />}    value={fmtCurrency(condoFee)}      label="Condomínio" wide /> : null}
+                      {condoFee       ? <FeatureItem icon={<Building2 className="h-5 w-5" />}    value={`${fmtCurrency(condoFee)}/mês`} label="Condomínio" wide /> : null}
                       {iptu           ? <FeatureItem icon={<DollarSign className="h-5 w-5" />}   value={fmtCurrency(iptu)}          label="IPTU/ano" wide /> : null}
                       {refCode        ? <FeatureItem icon={<Hash className="h-5 w-5" />}         value={refCode}                    label="Código" /> : null}
-                      {p.status       ? <FeatureItem icon={<CheckCircle2 className="h-5 w-5" />} value={p.status}                   label="Status" /> : null}
+                    </div>
+
+                    {/* Badges de condições */}
+                    <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t">
+                      {p.furnished_status === "mobiliado" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium"><Sofa className="h-3.5 w-3.5" />Mobiliado</span>
+                      )}
+                      {p.furnished_status === "semimobiliado" && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-medium"><Sofa className="h-3.5 w-3.5" />Semimobiliado</span>
+                      )}
+                      {p.accepts_financing && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium"><CheckCircle2 className="h-3.5 w-3.5" />Aceita Financiamento</span>
+                      )}
+                      {p.accepts_fgts && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium"><CheckCircle2 className="h-3.5 w-3.5" />Aceita FGTS</span>
+                      )}
+                      {p.accepts_exchange && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-medium"><CheckCircle2 className="h-3.5 w-3.5" />Aceita Permuta</span>
+                      )}
+                      {p.nearby_subway && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">
+                          <Train className="h-3.5 w-3.5" />Próximo ao Metrô{p.subway_distance_m ? ` (${p.subway_distance_m}m)` : ""}
+                        </span>
+                      )}
+                      {p.property_condition && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium capitalize">{p.property_condition.replace(/_/g, " ")}</span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Amenidades da Unidade */}
+                {Array.isArray(p.amenities_unit) && p.amenities_unit.length > 0 && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <h2 className="font-heading text-xl font-bold mb-4">Características da Unidade</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {(p.amenities_unit as string[]).map((item: string) => (
+                          <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            {item.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Amenidades do Condomínio */}
+                {Array.isArray(p.amenities_condo) && p.amenities_condo.length > 0 && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <h2 className="font-heading text-xl font-bold mb-4">Lazer e Condomínio</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {(p.amenities_condo as string[]).map((item: string) => (
+                          <span key={item} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-sm font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            {item.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Ficha Técnica */}
+                {(p.condo_name || p.builder || p.condo_administrator || p.block || p.unit_number) && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <h2 className="font-heading text-xl font-bold mb-4">Ficha Técnica</h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {p.condo_name && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Empreendimento</span>
+                            <span className="font-medium">{p.condo_name}</span>
+                          </div>
+                        )}
+                        {p.builder && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Construtora</span>
+                            <span className="font-medium">{p.builder}</span>
+                          </div>
+                        )}
+                        {p.condo_administrator && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Administradora</span>
+                            <span className="font-medium">{p.condo_administrator}</span>
+                          </div>
+                        )}
+                        {p.block && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Bloco / Torre</span>
+                            <span className="font-medium">{p.block}</span>
+                          </div>
+                        )}
+                        {p.unit_number && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Unidade</span>
+                            <span className="font-medium">{p.unit_number}</span>
+                          </div>
+                        )}
+                        {p.condo_units && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">Total de Unidades</span>
+                            <span className="font-medium">{p.condo_units} unidades</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Tour Virtual */}
+                {p.tour_virtual_url && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <h2 className="font-heading text-xl font-bold mb-4">Tour Virtual 360°</h2>
+                      <div className="w-full aspect-[16/9] rounded-lg overflow-hidden border">
+                        <iframe
+                          title="Tour Virtual 360°"
+                          src={p.tour_virtual_url}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0 }}
+                          allowFullScreen
+                          loading="lazy"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                        <Globe className="h-3.5 w-3.5" /> Use o mouse ou toque para navegar pelo tour virtual
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Descrição */}
                 {p.description && (

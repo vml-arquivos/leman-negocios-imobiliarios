@@ -135,7 +135,54 @@ export function mapPropertyInputToDb(input: Record<string, any>, userId?: number
   if (input.ownerId !== undefined)
     mapped.owner_id = toIntOrNull(input.ownerId);
 
-  // ── created_by: userId explícito tem prioridade ──────────────────────────
+  // ── Novos campos ricos ───────────────────────────────────────────────────────────────────────────────────
+  // Áreas
+  if (input.usefulArea   !== undefined) mapped.useful_area   = toNumericOrNull(input.usefulArea);
+  if (input.landArea     !== undefined) mapped.land_area     = toNumericOrNull(input.landArea);
+  if (input.serviceArea  !== undefined) mapped.service_area  = toNumericOrNull(input.serviceArea);
+
+  // Detalhes do imóvel
+  if (input.propertySubtype   !== undefined) mapped.property_subtype   = emptyToNull(input.propertySubtype);
+  if (input.propertyCondition !== undefined) mapped.property_condition = emptyToNull(input.propertyCondition);
+  if (input.floorNumber       !== undefined) mapped.floor_number       = toIntOrNull(input.floorNumber);
+  if (input.totalFloors       !== undefined) mapped.total_floors       = toIntOrNull(input.totalFloors);
+  if (input.unitsPerFloor     !== undefined) mapped.units_per_floor    = toIntOrNull(input.unitsPerFloor);
+  if (input.unitNumber        !== undefined) mapped.unit_number        = emptyToNull(input.unitNumber);
+  if (input.block             !== undefined) mapped.block              = emptyToNull(input.block);
+  if (input.yearBuilt         !== undefined) mapped.year_built         = toIntOrNull(input.yearBuilt);
+  if (input.sunPosition       !== undefined) mapped.sun_position       = emptyToNull(input.sunPosition);
+  if (input.furnishedStatus   !== undefined) mapped.furnished_status   = emptyToNull(input.furnishedStatus);
+  if (input.lavabos           !== undefined) mapped.lavabos            = toIntOrNull(input.lavabos);
+
+  // Financeiro
+  if (input.fireInsurance    !== undefined) mapped.fire_insurance    = toNumericOrNull(input.fireInsurance);
+  if (input.acceptsFinancing !== undefined) mapped.accepts_financing = input.acceptsFinancing;
+  if (input.acceptsFgts      !== undefined) mapped.accepts_fgts      = input.acceptsFgts;
+  if (input.acceptsExchange  !== undefined) mapped.accepts_exchange  = input.acceptsExchange;
+
+  // Condomínio
+  if (input.condoName          !== undefined) mapped.condo_name          = emptyToNull(input.condoName);
+  if (input.condoUnits         !== undefined) mapped.condo_units         = toIntOrNull(input.condoUnits);
+  if (input.condoAdministrator !== undefined) mapped.condo_administrator = emptyToNull(input.condoAdministrator);
+  if (input.builder            !== undefined) mapped.builder             = emptyToNull(input.builder);
+
+  // Amenidades (arrays JSON)
+  if (input.amenitiesUnit  !== undefined) mapped.amenities_unit  = input.amenitiesUnit;
+  if (input.amenitiesCondo !== undefined) mapped.amenities_condo = input.amenitiesCondo;
+
+  // Localização extra
+  if (input.nearbySubway     !== undefined) mapped.nearby_subway      = input.nearbySubway;
+  if (input.subwayDistanceM  !== undefined) mapped.subway_distance_m  = toIntOrNull(input.subwayDistanceM);
+
+  // SEO
+  if (input.seoScore     !== undefined) mapped.seo_score     = toIntOrNull(input.seoScore);
+  if (input.seoKeywords  !== undefined) mapped.seo_keywords  = emptyToNull(input.seoKeywords);
+  if (input.canonicalUrl !== undefined) mapped.canonical_url = emptyToNull(input.canonicalUrl);
+
+  // Mídia (compat camelCase)
+  if (input.videoUrl !== undefined) mapped.video_url = emptyToNull(input.videoUrl);
+
+  // ── created_by: userId explícito tem prioridade ─────────────────────────────────────────
   if (userId !== undefined) {
     mapped.created_by = userId;
   } else if (input.createdBy !== undefined) {
