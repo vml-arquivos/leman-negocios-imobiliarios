@@ -476,19 +476,123 @@ const leadsRouter = router({
       email: z.string().email().optional(),
       phone: z.string().optional(),
       whatsapp: z.string().optional(),
-      source: z.enum(["site", "whatsapp", "instagram", "facebook", "indicacao", "portal_zap", "portal_vivareal", "portal_olx", "google", "outro"]).optional(),
+      source: z.enum(["site", "whatsapp", "instagram", "facebook", "indicacao", "portal_zap", "portal_vivareal", "portal_olx", "google", "simulador", "outro"]).optional(),
+      // Intenção do cliente — campo principal de qualificação
+      finalidade: z.enum(["comprador", "locatario", "proprietario_venda", "proprietario_locacao", "assessoria", "outro"]).optional(),
+      interesse: z.enum(["venda", "locacao", "ambos"]).optional(),
       interestedPropertyId: z.number().optional(),
       budgetMin: z.number().optional(),
       budgetMax: z.number().optional(),
       preferredNeighborhoods: z.string().optional(),
       preferredPropertyTypes: z.string().optional(),
       notes: z.string().optional(),
+      // UTM tracking
+      utmSource: z.string().optional(),
+      utmMedium: z.string().optional(),
+      utmCampaign: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      return await db.createLead({
+      // Inferir interesse a partir da finalidade se não informado
+      let interesse = input.interesse;
+      if (!interesse && input.finalidade) {
+        if (input.finalidade === "comprador") interesse = "venda";
+        else if (input.finalidade === "locatario") interesse = "locacao";
+        else if (input.finalidade === "proprietario_venda") interesse = "venda";
+        else if (input.finalidade === "proprietario_locacao") interesse = "locacao";
+      }
+
+      const lead = await db.createLead({
         ...input,
         stage: "novo",
+        interesse,
+        finalidade: input.finalidade,
+        utm_source: input.utmSource,
+        utm_medium: input.utmMedium,
+        utm_campaign: input.utmCampaign,
+        metadata: {
+          interestedPropertyId: input.interestedPropertyId,
+          capturedAt: new Date().toISOString(),
+          origin: "formulario_site",
+        },
       });
+
+      // Criar interação automática de entrada
+      await db.createInteraction({
+        leadId: lead.id,
+        tipo: "nota",
+        canal: input.source === "whatsapp" ? "whatsapp" : "site",
+        assunto: "Lead capturado pelo site",
+        descricao: input.notes
+          ? `Mensagem: ${input.notes}`
+          : `Lead entrou pelo formulário do site. Finalidade: ${input.finalidade ?? "não informada"}.`,
+        metadata: { source: input.source, interestedPropertyId: input.interestedPropertyId },
+      });
+
+      return lead;
+    }),
+
+  // Capturar lead ao clicar no botão WhatsApp (público - sem bloquear o redirecionamento)
+  captureWhatsAppClick: publicProcedure
+    .input(z.object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      whatsapp: z.string().optional(),
+      email: z.string().email().optional(),
+      finalidade: z.enum(["comprador", "locatario", "proprietario_venda", "proprietario_locacao", "assessoria", "outro"]).optional(),
+      interesse: z.enum(["venda", "locacao", "ambos"]).optional(),
+      interestedPropertyId: z.number().optional(),
+      propertyTitle: z.string().optional(),
+      utmSource: z.string().optional(),
+      utmMedium: z.string().optional(),
+      utmCampaign: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Se não tem telefone, registrar como lead anônimo com metadata
+      const phone = input.phone ?? input.whatsapp ?? "anonimo_" + Date.now();
+      const name = input.name ?? "Visitante (WhatsApp)";
+
+      let interesse = input.interesse;
+      if (!interesse && input.finalidade) {
+        if (input.finalidade === "comprador") interesse = "venda";
+        else if (input.finalidade === "locatario") interesse = "locacao";
+      }
+
+      try {
+        const lead = await db.upsertLeadFromWhatsApp({
+          name,
+          telefone: phone,
+          email: input.email,
+          stage: "contato_inicial",
+          origem: "whatsapp",
+          finalidade: input.finalidade,
+          interesse,
+          utm_source: input.utmSource ?? "whatsapp_cta",
+          utm_medium: input.utmMedium ?? "site",
+          utm_campaign: input.utmCampaign,
+          metadata: {
+            interestedPropertyId: input.interestedPropertyId,
+            propertyTitle: input.propertyTitle,
+            capturedAt: new Date().toISOString(),
+            origin: "whatsapp_cta_click",
+          },
+        });
+
+        await db.createInteraction({
+          leadId: lead.id,
+          tipo: "whatsapp",
+          canal: "whatsapp",
+          assunto: "Clicou no botão WhatsApp",
+          descricao: input.propertyTitle
+            ? `Cliente clicou em "Falar no WhatsApp" no imóvel: ${input.propertyTitle}`
+            : `Cliente clicou em "Falar no WhatsApp" no site.`,
+          metadata: { source: "whatsapp_cta", interestedPropertyId: input.interestedPropertyId },
+        });
+
+        return { success: true, leadId: lead.id };
+      } catch (e) {
+        // Não bloquear o usuário mesmo se falhar
+        return { success: false, leadId: null };
+      }
     }),
 
   // Atualizar lead (protegido)
@@ -670,6 +774,206 @@ const leadsRouter = router({
       const interactions = await db.getInteractionsByLeadId(input.leadId);
       const lastInteraction = interactions[0]?.created_at ?? null;
       return computeNextAction(lead, lastInteraction);
+    }),
+
+  // Listar leads enriquecidos com última interação, score e próxima ação
+  listEnriched: protectedProcedure
+    .input(z.object({
+      finalidade: z.enum(["comprador", "locatario", "proprietario_venda", "proprietario_locacao", "assessoria", "outro"]).optional(),
+      stage: z.string().optional(),
+      search: z.string().optional(),
+      assignedTo: z.number().optional(),
+      limit: z.number().optional(),
+      offset: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const allLeads = await db.getAllLeads();
+
+      let filtered = allLeads;
+
+      // Filtrar por finalidade
+      if (input?.finalidade) {
+        filtered = filtered.filter((l: any) =>
+          l.finalidade === input.finalidade ||
+          (l.metadata as any)?.finalidade === input.finalidade
+        );
+      }
+
+      // Filtrar por estágio
+      if (input?.stage) {
+        filtered = filtered.filter((l: any) => l.status === input.stage);
+      }
+
+      // Filtrar por busca
+      if (input?.search) {
+        const s = input.search.toLowerCase();
+        filtered = filtered.filter((l: any) =>
+          l.name?.toLowerCase().includes(s) ||
+          l.email?.toLowerCase().includes(s) ||
+          l.telefone?.includes(s)
+        );
+      }
+
+      // Filtrar por responsável
+      if (input?.assignedTo) {
+        filtered = filtered.filter((l: any) => l.assigned_to === input.assignedTo);
+      }
+
+      // Enriquecer com última interação e próxima ação
+      const enriched = await Promise.all(
+        filtered.map(async (lead: any) => {
+          const interactions = await db.getInteractionsByLeadId(lead.id);
+          const lastInteraction = interactions[0] ?? null;
+          const nextAction = computeNextAction(lead, lastInteraction?.created_at ?? null);
+          const { score, priority } = computeLeadScore(lead);
+
+          // Calcular dias sem contato
+          const lastContact = lastInteraction?.created_at ?? lead.created_at;
+          const daysSinceContact = Math.floor(
+            (Date.now() - new Date(lastContact).getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          return {
+            ...lead,
+            score,
+            priority,
+            nextAction,
+            lastInteraction,
+            daysSinceContact,
+            interactionCount: interactions.length,
+          };
+        })
+      );
+
+      // Ordenar por score desc, depois por data de criação desc
+      enriched.sort((a: any, b: any) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+
+      return enriched;
+    }),
+
+  // Estatísticas do CRM por finalidade
+  getStats: protectedProcedure
+    .query(async () => {
+      const allLeads = await db.getAllLeads();
+      const now = Date.now();
+      const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+
+      const stats = {
+        total: allLeads.length,
+        byFinalidade: {
+          comprador: 0,
+          locatario: 0,
+          proprietario_venda: 0,
+          proprietario_locacao: 0,
+          assessoria: 0,
+          outro: 0,
+          nao_qualificado: 0,
+        } as Record<string, number>,
+        byStage: {} as Record<string, number>,
+        alertas: {
+          semContato3Dias: 0,
+          novosHoje: 0,
+          quentes: 0,
+        },
+      };
+
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      for (const lead of allLeads) {
+        // Por finalidade
+        const fin = (lead as any).finalidade ?? (lead as any).metadata?.finalidade ?? "nao_qualificado";
+        if (fin in stats.byFinalidade) stats.byFinalidade[fin]++;
+        else stats.byFinalidade.nao_qualificado++;
+
+        // Por estágio
+        const stage = (lead as any).status ?? "novo";
+        stats.byStage[stage] = (stats.byStage[stage] ?? 0) + 1;
+
+        // Alertas
+        const lastContact = (lead as any).ultima_interacao ?? (lead as any).created_at;
+        if (now - new Date(lastContact).getTime() > threeDaysMs) {
+          stats.alertas.semContato3Dias++;
+        }
+        if (new Date((lead as any).created_at) >= hoje) {
+          stats.alertas.novosHoje++;
+        }
+        const score = (lead as any).score ?? 0;
+        if (score >= 60) stats.alertas.quentes++;
+      }
+
+      return stats;
+    }),
+
+  // Qualificar lead manualmente (protegido)
+  qualify: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      finalidade: z.enum(["comprador", "locatario", "proprietario_venda", "proprietario_locacao", "assessoria", "outro"]),
+      stage: z.enum(["novo", "contato_inicial", "qualificado", "visita_agendada", "visita_realizada", "proposta", "negociacao", "fechado_ganho", "fechado_perdido", "sem_interesse"]).optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await db.updateLead(input.id, {
+        finalidade: input.finalidade,
+        stage: input.stage ?? "qualificado",
+      });
+
+      await db.createInteraction({
+        leadId: input.id,
+        userId: ctx.user.id,
+        tipo: "status_change",
+        canal: "admin",
+        assunto: "Lead qualificado",
+        descricao: `Finalidade definida: ${input.finalidade}. ${input.notes ?? ""}`,
+        metadata: { finalidade: input.finalidade, stage: input.stage },
+      });
+
+      return { success: true };
+    }),
+
+  // Adicionar interação rápida (protegido)
+  addQuickInteraction: protectedProcedure
+    .input(z.object({
+      leadId: z.number(),
+      type: z.enum(["ligacao", "whatsapp", "email", "visita", "reuniao", "proposta", "nota", "status_change"]),
+      description: z.string().optional(),
+      nextAction: z.string().optional(),
+      nextActionDate: z.string().optional(),
+      newStage: z.enum(["novo", "contato_inicial", "qualificado", "visita_agendada", "visita_realizada", "proposta", "negociacao", "fechado_ganho", "fechado_perdido", "sem_interesse"]).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Criar interação
+      await db.createInteraction({
+        leadId: input.leadId,
+        userId: ctx.user.id,
+        tipo: input.type,
+        canal: input.type === "ligacao" ? "telefone" : input.type,
+        assunto: {
+          ligacao: "Ligação realizada",
+          whatsapp: "Mensagem WhatsApp",
+          email: "E-mail enviado",
+          visita: "Visita ao imóvel",
+          reuniao: "Reunião",
+          proposta: "Proposta enviada",
+          nota: "Anotação",
+          status_change: "Mudança de status",
+        }[input.type] ?? input.type,
+        descricao: input.description,
+        proxima_acao: input.nextAction,
+        data_proxima_acao: input.nextActionDate ? new Date(input.nextActionDate) : undefined,
+        metadata: { newStage: input.newStage },
+      });
+
+      // Avançar estágio se informado
+      if (input.newStage) {
+        await db.updateLead(input.leadId, { stage: input.newStage });
+      }
+
+      return { success: true };
     }),
 });
 // ============================================

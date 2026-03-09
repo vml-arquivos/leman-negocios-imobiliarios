@@ -157,6 +157,17 @@ export default function PropertyDetail() {
     message: "Olá! Tenho interesse neste imóvel e gostaria de mais informações.",
   });
 
+  const captureWhatsAppMutation = trpc.leads.captureWhatsAppClick.useMutation();
+
+  const handleWhatsAppClick = () => {
+    captureWhatsAppMutation.mutate({
+      propertyId: propertyId || undefined,
+      propertyTitle: (property as any)?.title,
+      propertyRef: (property as any)?.reference_code ?? (property as any)?.referenceCode,
+    });
+    window.open(whatsappUrl, "_blank");
+  };
+
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: () => {
       toast.success("Mensagem enviada! Entraremos em contato em breve.");
@@ -702,14 +713,13 @@ export default function PropertyDetail() {
 
                     {/* CTAs diretos */}
                     <div className="space-y-3 mb-6">
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={handleWhatsAppClick}
                         className="flex items-center justify-center gap-2 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                       >
                         <MessageSquare className="h-5 w-5" /> Falar no WhatsApp
-                      </a>
+                      </button>
                       <a
                         href="tel:+5561998687245"
                         className="flex items-center justify-center gap-2 w-full border border-border hover:bg-muted text-foreground font-semibold py-3 px-4 rounded-lg transition-colors"

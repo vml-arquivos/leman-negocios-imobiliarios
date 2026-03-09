@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '@/lib/utils-types';
@@ -357,6 +358,11 @@ const FinancingSimulator: React.FC = () => {
     toast.success('PDF gerado com sucesso!');
   };
 
+  const createLeadMutation = trpc.leads.create.useMutation({
+    onSuccess: () => {},
+    onError: () => {},
+  });
+
   // Abrir dialog de cliente
   const handleViewDetails = (result: SimulationResult) => {
     setSelectedResult(result);
@@ -369,7 +375,17 @@ const FinancingSimulator: React.FC = () => {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
-
+    // Criar lead no CRM automaticamente
+    createLeadMutation.mutate({
+      name: clientData.name,
+      email: clientData.email,
+      phone: clientData.phone,
+      source: 'simulador',
+      finalidade: 'comprador',
+      notes: selectedResult
+        ? `Simulação (versão clássica): ${selectedResult.bank} — Parcela PRICE R$ ${selectedResult.priceInstallment.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} — ${parseInt(termYears) * 12} meses — Imóvel R$ ${parseFloat(propertyValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : undefined,
+    });
     if (selectedResult) {
       generatePDF(selectedResult);
       setShowClientDialog(false);
